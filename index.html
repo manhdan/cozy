@@ -67,7 +67,9 @@
             cursor: pointer;
         }
         #hud-toggle:hover, #hud-gear:hover { background: #fff; }
-        /* [G14] Nút ⚙️ Cài đặt: góc trên phải bảng menu (đối xứng nút 🌿), chỉ hiện khi bảng đang mở bung */
+        /* [G25] nút ⚙️ nằm ngay dưới nút 🌿, thẳng cột */
+        #hud-btns { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: none; pointer-events: none; }
+        /* [G14] Nút ⚙️ Cài đặt   [G25] nay nằm dưới nút 🌿 (cột trái của bảng), chỉ hiện khi bảng đang mở bung */
         #ui-layer.collapsed #hud-gear { display: none; }
         #ui-layer:not(.collapsed) { padding-right: 10px; }
         /* [V92] Setting được GỘP vào bảng Cozy World: không còn nút ⚙️ và popup riêng; #settings-panel là khối nằm dưới các dòng thống kê */
@@ -165,7 +167,10 @@
 <body>
 
     <div id="ui-layer" class="collapsed" style="z-index:5">
+        <div id="hud-btns">
         <button id="hud-toggle" type="button" aria-expanded="false" title="Hiện / ẩn thông tin">🌿</button>
+        <button id="hud-gear" type="button" title="Cài đặt · lịch sử mốc lớn · hướng dẫn">⚙️</button>
+        </div>
         <div id="hud-main">
         <div id="hud-mini" title="Thời gian · % bản đồ đã mở · người lớn/người già/trẻ em · thời tiết | việc đang cần làm nhất">⏱ 00:00 · 🏝️ –% · 👦🏻 –/–/– · ☀️ | 🌱 –</div>
         <div id="hud-body">
@@ -176,7 +181,6 @@
         <p class="stats" id="stats-line4"></p>
         </div>
         </div>
-        <button id="hud-gear" type="button" title="Cài đặt · lịch sử mốc lớn · hướng dẫn">⚙️</button>
     </div>
 
     <div id="evt-bar"></div>
@@ -1079,8 +1083,13 @@ const BIRD_ALTITUDE = 110;   // bóng chim rơi xuống đất cách chim chừn
 // ===== [V21] NGHỀ CHUYÊN: thợ săn / ngư dân =====
 const JOB_SHARE = 0.05, JOB_MIN = 0;
 const FISHER_DELAY = 5;   // [G19] ngư dân / tàu lùi mốc xuất hiện: tàu thứ n xuất hiện khi dân >= 10 + 20 * (n - 1) + FISHER_DELAY (tàu đầu 10 -> 15 người, tàu 2: 30 -> 35 ...); thợ săn giữ nguyên
-const HUNT_RANGE = 5, HUNT_HIT = 0.55, HUNT_GIVE_UP = 240;   // [G17] HUNT_HIT 0.85 -> 0.55: tỉ lệ hụt 15% -> 45% (gấp 3)
+const HUNT_RANGE = 5, HUNT_HIT = 0.17, HUNT_GIVE_UP = 240;   // [G17] HUNT_HIT 0.85 -> 0.55  [G27] 0.55 -> 0.17: bắn trúng con mồi chỉ 17% (hụt 83%)
 const HUNT_MISS_MAX = 5, HUNT_PAUSE = 5;                       // [G17] hụt liên tiếp 5 phát => nghỉ 5 giây rồi săn lại (ưu tiên đàn khác)
+// [G27] THỢ SĂN TẬP BẮN lúc nghỉ (sau khi săn xong / hết giờ săn): ngồi nghỉ 9-19s, mỗi quãng ngồi có PRACTICE_CHANCE đứng dậy dựng giá hồng tâm tập 1-2 lượt (mỗi lượt 5 mũi, rồi ra rút tên; lượt sau lùi xa thêm 35px, tối đa 5 mức), xong tháo giá, ngồi nghỉ tiếp.
+//      Mức độ chụm tên theo (khoảng cách, kỹ năng): kỹ năng khởi điểm 0.18, mỗi mũi +0.008 (tối đa 0.92) và được giữ theo từng thợ săn. Cùng công thức với bản duyệt V108 (CozyWorld_PostMan).
+const PRACTICE_CHANCE = 0.5, PRACTICE_SIT_MIN = 9, PRACTICE_SIT_RANGE = 10;
+const PRACTICE_ROUNDS_MIN = 1, PRACTICE_ROUNDS_MAX = 2, PRACTICE_ARROWS = 5, PRACTICE_R = 8;   // PRACTICE_R: bán kính hồng tâm (px)
+const PRACTICE_DIST0 = 70, PRACTICE_DIST_STEP = 35, PRACTICE_DIST_N = 5;                      // khoảng cách đứng bắn (px): 70, 105, 140, 175, 210
 const FISH_DAYS_MIN = 2, FISH_DAYS_MAX = 3, BOAT_SPEED = 38;
 const FISH_SHORE_MIN = 4, FISH_SHORE_MAX = 15;   // [V32] điểm đánh cá phải cách đất >= 4 ô (v32 đầu: 8); chỉ vào sát bờ khi mang cá về
 const DEER_RESPAWN_BASE = 300;   // [V100] giây game: hươu hồi sinh sau 5-10 phút (V99: 10-20 phút)
@@ -4833,7 +4842,7 @@ class Bot {
             this.homeHouse = null; this.homeDoor = null; this.sleepOut = false;
             if (jr) {   // [V106] tạnh mưa mà chưa hết ngày: ra cửa ngồi nghỉ tiếp
                 this.jobRestIn = null;
-                if (!gone && simClock < jr.until && !this.nightWants()) { jr.phase = 'rest'; this.jb = jr; this.state = 'JOB'; this.rest = 'sit'; this.path = null; this.speed = 65; }
+                if (!gone && simClock < jr.until && !this.nightWants()) { jr.phase = 'rest'; jr.pr = null; this.jb = jr; this.state = 'JOB'; this.rest = 'sit'; this.path = null; this.speed = 65; }
             }
         }
     }
@@ -5078,12 +5087,101 @@ class Bot {
             if (simClock >= j.until) { this.endJob(); return; }
             if (rainTierFor(this) >= 1 && this.pop >= 1 && this.tryGoHome(false, true)) {   // [V106] mưa: thợ săn / thủy thủ đang ngồi nghỉ thì vào nhà nghỉ
                 this.jobRestIn = j; this.jb = null; this.stealth = false; this.jmove = false; this.boat = false; this.rest = null;
-            }
+            } else if (j.kind === 'hunt') this.updatePractice(dt, j);   // [G27] thợ săn: ngồi nghỉ xen tập bắn
             return;
         }
         if (j.kind === 'hunt') this.updateHunt(dt, j); else this.updateFish(dt, j);
     }
     startRest(j) { j.phase = 'rest'; j.until = dayEnd(); this.rest = 'sit'; this.path = null; this.stealth = false; this.boat = false; this.jmove = false; this.speed = 65; }
+
+    // --- [G27] thợ săn tập bắn lúc nghỉ ---
+    // Máy trạng thái j.pr.s: sit (ngồi nghỉ) -> setup (dựng giá) -> nock -> aim -> shoot -> relax  (x5 mũi)  -> toPull (ra rút tên) -> pull -> [toLine (lùi xa thêm) -> nock ...] -> down (tháo giá) -> sit
+    // Giá hồng tâm đặt cùng hàng với thợ săn (cùng y) nên đi lại chỉ dọc một đường thẳng đã kiểm tra thông thoáng (không nước / nhà / biển).
+    practiceDist(idx) { return PRACTICE_DIST0 + idx * PRACTICE_DIST_STEP; }
+    pickPracticeSpot(pr) {
+        const T = TILE_SIZE, k = (this.archRounds | 0) % PRACTICE_DIST_N, ord = Math.random() < 0.5 ? [1, -1] : [-1, 1];
+        const clear = (x0, x1, y) => x0 >= T && x1 >= T && x0 < (GRID_W - 1) * T && x1 < (GRID_W - 1) * T && y >= T && y < (GRID_H - 1) * T && losClear(x0 / T, y / T, x1 / T, y / T, -1, -1);
+        for (const sd of ord) {
+            for (const i0 of (k ? [k, 0] : [0])) {
+                const tx = this.x + sd * this.practiceDist(i0), ty = this.y, gx = Math.floor(tx / T), gy = Math.floor(ty / T);
+                if (gx < 1 || gy < 1 || gx >= GRID_W - 1 || gy >= GRID_H - 1 || grid[gx][gy].type !== TYPE_GRASS) continue;
+                let n = 0;
+                for (let m = 0; m < PRACTICE_DIST_N; m++) { if (!clear(tx - sd * this.practiceDist(m), tx + sd * 22, ty)) break; n = m + 1; }   // đường bắn lùi được tới mấy mức
+                if (n <= i0) continue;
+                pr.sd = sd; pr.tx = tx; pr.ty = ty; pr.n = n; pr.idx = i0; return true;
+            }
+        }
+        return false;
+    }
+    practiceGo(tx, ty, dt) {   // đi thẳng tới (tx, ty); true khi tới nơi
+        const dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy);
+        if (d < 2) return true;
+        const sp = Math.min(d, 52 * dt); this.x += dx / d * sp; this.y += dy / d * sp;
+        if (Math.abs(dx) > 0.4) this.dir = dx > 0 ? 1 : -1;
+        this.jmove = true; return false;
+    }
+    updatePractice(dt, j) {
+        const pr = j.pr || (j.pr = { s: 'sit', t: 0, wait: 4 + Math.random() * 6, hung: 0, wob: 0, arrows: [], sd: 1, tx: 0, ty: 0, n: 1, idx: 0, left: 0, rounds: 0, shot: null });
+        pr.t += dt; pr.wob = Math.max(0, pr.wob - dt * 0.9);
+        const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.75;
+        switch (pr.s) {
+            case 'sit':
+                if (pr.t < pr.wait) break;
+                if (Math.random() < PRACTICE_CHANCE && this.pickPracticeSpot(pr)) {
+                    pr.s = 'setup'; pr.t = 0; pr.arrows.length = 0; pr.hung = 0;
+                    pr.rounds = PRACTICE_ROUNDS_MIN + Math.floor(Math.random() * (PRACTICE_ROUNDS_MAX - PRACTICE_ROUNDS_MIN + 1));
+                    this.rest = 'stand'; this.dir = pr.sd;                    // đứng dậy, quay về phía giá
+                } else { pr.t = 0; pr.wait = PRACTICE_SIT_MIN + Math.random() * PRACTICE_SIT_RANGE; }   // lần này chỉ ngồi nghỉ tiếp
+                break;
+            case 'setup':                                                      // dựng giá: hồng tâm phồng dần lên
+                pr.hung = Math.min(1, pr.t / 1.8);
+                if (pr.t > 2.2) { pr.s = 'nock'; pr.t = 0; pr.left = PRACTICE_ARROWS; this.dir = pr.sd; }
+                break;
+            case 'nock': this.dir = pr.sd; j.p = 0; if (pr.t > 0.6) { pr.s = 'aim'; pr.t = 0; } break;
+            case 'aim':
+                this.dir = pr.sd; j.p = Math.min(0.9, pr.t / 1.1 * 0.9);      // dây cung căng dần (drawJobProps chia 0.9)
+                if (pr.t > 1.1) {
+                    const dist = Math.abs(pr.tx - this.x), sk = this.archSkill === undefined ? 0.18 : this.archSkill;
+                    const sdv = (15 - 11.8 * sk) * (0.55 + dist / 260), dx = gauss() * sdv * 0.6, dy = gauss() * sdv * 0.6, on = Math.hypot(dx, dy) <= PRACTICE_R;
+                    let ex = pr.tx + dx, ey = pr.ty - 16 + dy;                  // tâm hồng tâm cao 16px so với mặt đất
+                    if (!on) { ex = pr.tx + pr.sd * (9 + Math.random() * 14); ey = pr.ty + (Math.random() - 0.3) * 5; }   // trượt: mũi bay qua, cắm xuống cỏ phía sau giá
+                    pr.shot = { dx, dy, on, ex, ey, dur: Math.max(0.3, Math.min(0.9, dist / 300)) };
+                    j.ax = ex; j.ay = ey + 8; j.p = 0; pr.s = 'shoot'; pr.t = 0;   // drawArrow tự trừ 8px độ cao
+                }
+                break;
+            case 'shoot':
+                j.p = Math.min(1, pr.t / pr.shot.dur);
+                if (pr.t >= pr.shot.dur) {
+                    const S = pr.shot;
+                    pr.arrows.push(S.on ? { on: true, x: S.dx, y: S.dy } : { on: false, x: S.ex - pr.tx, y: S.ey - pr.ty });
+                    if (S.on) pr.wob = 1;
+                    this.archSkill = Math.min(0.92, (this.archSkill === undefined ? 0.18 : this.archSkill) + 0.008);
+                    pr.s = 'relax'; pr.t = 0;
+                }
+                break;
+            case 'relax':
+                this.dir = pr.sd;
+                if (pr.t > 0.8) { pr.t = 0; if (--pr.left > 0) pr.s = 'nock'; else pr.s = 'toPull'; }
+                break;
+            case 'toPull': if (this.practiceGo(pr.tx - pr.sd * 20, pr.ty, dt)) { this.dir = pr.sd; pr.s = 'pull'; pr.t = 0; } break;
+            case 'pull':                                                       // rút từng mũi tên
+                this.dir = pr.sd;
+                if (pr.t > 0.5) {
+                    pr.t = 0;
+                    if (pr.arrows.length) pr.arrows.shift();
+                    else {
+                        this.archRounds = (this.archRounds | 0) + 1;
+                        if (--pr.rounds > 0) { pr.idx = (pr.idx + 1) % pr.n; pr.s = 'toLine'; } else pr.s = 'down';
+                    }
+                }
+                break;
+            case 'toLine': if (this.practiceGo(pr.tx - pr.sd * this.practiceDist(pr.idx), pr.ty, dt)) { this.dir = pr.sd; pr.s = 'nock'; pr.t = 0; pr.left = PRACTICE_ARROWS; } break;
+            case 'down':                                                       // tháo giá rồi ngồi nghỉ
+                pr.hung = Math.max(0, 1 - pr.t / 1.4);
+                if (pr.t > 1.4) { pr.s = 'sit'; pr.t = 0; pr.wait = PRACTICE_SIT_MIN + Math.random() * PRACTICE_SIT_RANGE; pr.hung = 0; pr.arrows.length = 0; this.rest = 'sit'; }
+                break;
+        }
+    }
 
     // --- thợ săn ---
     startHunt() {
@@ -5495,7 +5593,8 @@ class Bot {
                 setType(c, TYPE_TREE);
                 c.growth = 0.05;
                 if (!c.inGrow) { c.inGrow = true; growingTrees.push(c); }
-                c.treeVar = pickTreeVariant(c.x, c.y);
+                const ot = c.orderRef;   // [G25] lệnh trồng có chọn loại cây: lấy ngẫu nhiên một màu / biến thể trong loại đó
+                c.treeVar = (ot && !ot.dead && ot.treeVars && ot.treeVars.length) ? ot.treeVars[Math.floor(Math.random() * ot.treeVars.length)] : pickTreeVariant(c.x, c.y);
                 growBambooClump(c, false);   // [V67]
             }
         } else if (c.taskType === 'TEND') {
@@ -6745,6 +6844,8 @@ function drawBot(b, x, y, time) {
     ctx.save();
     ctx.translate(x, y);
     const ps = b.pop === undefined ? 1 : b.pop;
+    const stand = (b.jb && b.jb.kind === 'hunt' && b.jb.phase === 'rest' && b.jb.pr && b.jb.pr.hung > 0.01) ? b.jb.pr : null;   // [G27] giá hồng tâm của thợ săn tập bắn
+    if (stand && stand.ty <= b.y) drawArcheryStand(x + (stand.tx - b.x), y + (stand.ty - b.y), stand, time);   // giá ở sau lưng => vẽ trước người
     ctx.fillStyle = 'rgba(30,40,15,0.22)';      // [V11] bóng vẽ TRƯỚC khi lật hướng => luôn đúng hướng mặt trời
     ctx.beginPath(); addSunShadow(ctx, 0, 1, 6.5 * ps, 2.4 * ps, 22 * ps, sunNow); ctx.fill();
     ctx.scale(b.dir * ps, ps);
@@ -6757,7 +6858,7 @@ function drawBot(b, x, y, time) {
     // tay
     const armRaise = b.state === 'WORKING' ? Math.sin(time * 12) * 3 : -swing * 0.6;
     const sx = 4.3 * L.w - 0.3, ay = -14.5 - bob;
-    const hunting = !!(b.jb && b.jb.kind === 'hunt' && (b.jb.phase === 'seek' || b.jb.phase === 'aim' || b.jb.phase === 'shoot'));   // [V101] thợ săn giương cung: tay trước do drawJobProps vẽ, bỏ tay buông thừa
+    const hs = b.jb && b.jb.kind === 'hunt' ? huntStage(b.jb) : '', hunting = hs === 'seek' || hs === 'aim' || hs === 'shoot';   // [G27] gồm cả lúc tập bắn   // [V101] thợ săn giương cung: tay trước do drawJobProps vẽ, bỏ tay buông thừa
     let lx, ly, rx = 0, ry = 0, two = true;
     if (petting) { lx = -1.8; ly = -6.6; two = false; }   // [V82] tay sau đặt lên đầu gối
     else if (paint) { lx = -5.4; ly = -10.4 - bob; two = false; }   // [V65] tay sau cầm bảng màu (tay trước vẽ riêng)
@@ -6785,7 +6886,8 @@ function drawBot(b, x, y, time) {
         }
     }
     ctx.restore();
-    if (b.jb && b.jb.phase === 'shoot') drawArrow(b, b.jb, x, y);   // [V21]
+    if (stand && stand.ty > b.y) drawArcheryStand(x + (stand.tx - b.x), y + (stand.ty - b.y), stand, time);   // [G27] giá ở trước người => vẽ sau
+    if (b.jb && b.jb.kind === 'hunt' && huntStage(b.jb) === 'shoot') drawArrow(b, b.jb, x, y);   // [V21] [G27]
 }
 // [V60] Khúc gỗ vác trên vai khi bê từ chỗ cây bị chặt về chỗ xây nhà (hệ toạ độ của người, +x = hướng mặt): thân gỗ có vân, đầu cưa sáng, một tay đỡ.
 function drawCarriedLog(bob) {
@@ -6932,13 +7034,14 @@ function drawFieldTool(c, hx, hy, time) {
 // [V21] Nghề chuyên: cung tên, hàng mang theo, thuyền
 function drawJobProps(b, j, sit, bob) {
     ctx.lineCap = 'round';
-    if (j.kind === 'hunt' && (j.phase === 'seek' || j.phase === 'aim' || j.phase === 'shoot')) {
-        const y = -12.5 - bob, pull = j.phase === 'aim' ? Math.min(1, j.p / 0.9) : 0;
+    const hs = j.kind === 'hunt' ? huntStage(j) : '';   // [G27]
+    if (hs === 'seek' || hs === 'aim' || hs === 'shoot') {
+        const y = -12.5 - bob, pull = hs === 'aim' ? Math.min(1, j.p / 0.9) : 0;
         ctx.strokeStyle = '#7b5a37'; ctx.lineWidth = 1.4;
         ctx.beginPath(); ctx.arc(6.5, y, 6.5, -1.15, 1.15); ctx.stroke();                                // thân cung
         ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 0.7;
         ctx.beginPath(); ctx.moveTo(9.2, y - 5.9); ctx.lineTo(9.2 - 5 * pull, y); ctx.lineTo(9.2, y + 5.9); ctx.stroke();   // dây cung
-        if (j.phase === 'aim') { ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(9.2 - 5 * pull, y); ctx.lineTo(14, y); ctx.stroke(); }
+        if (hs === 'aim') { ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(9.2 - 5 * pull, y); ctx.lineTo(14, y); ctx.stroke(); }
         ctx.strokeStyle = '#e6bf94'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(3.6, -14 - bob); ctx.lineTo(7, y); ctx.stroke();   // tay cầm cung
     }
     if (j.load === 'deer') {
@@ -6950,6 +7053,35 @@ function drawJobProps(b, j, sit, bob) {
         ctx.fillStyle = '#b58a4f'; ctx.beginPath(); ctx.roundRect(-11, gy - 2, 7, 6, 1.5); ctx.fill();
         ctx.fillStyle = '#c9d6dc'; ctx.beginPath(); ctx.ellipse(-7.5, gy - 2.5, 3, 1.1, 0.3, 0, TAU); ctx.fill();
     }
+}
+// [G27] Giai đoạn giương cung: lúc săn chính là j.phase; lúc tập bắn (phase 'rest') suy ra từ j.pr.s (nock/aim => 'aim', relax => 'seek' = cầm cung hạ thấp)
+function huntStage(j) {
+    if (j.phase !== 'rest') return j.phase;
+    const s = j.pr && j.pr.s;
+    return (s === 'nock' || s === 'aim') ? 'aim' : s === 'shoot' ? 'shoot' : s === 'relax' ? 'seek' : '';
+}
+// [G27] Giá hồng tâm tập bắn (x, y = chân giá): khung chữ A + xà ngang, hồng tâm 5 vòng treo bằng dây (cùng màu / kích thước với bản duyệt V108), mũi tên cắm đuôi chĩa về phía người bắn.
+function drawArcheryStand(x, y, pr, time) {
+    const e = pr.hung, sc = e < 1 ? e * (1 + Math.sin(e * Math.PI) * 0.25) : 1, R = PRACTICE_R, oy = 15, face = -pr.sd;   // oy: tâm hồng tâm dưới điểm treo; face: hướng đuôi tên (về phía người bắn)
+    const arrow = (ax, ay, gx, gy) => {                                           // mũi tên cắm tại (ax, ay), thân tới (gx, gy)
+        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(gx, gy); ctx.stroke();
+        const fx = ax + (gx - ax) * 0.82, fy = ay + (gy - ay) * 0.82;
+        ctx.strokeStyle = '#e8dfc8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(gx + face * 1.2, gy - 2.2); ctx.moveTo(fx, fy); ctx.lineTo(gx + face * 1.2, gy + 1.4); ctx.stroke();
+    };
+    ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.lineCap = 'round';
+    ctx.fillStyle = 'rgba(30,40,15,0.2)'; ctx.beginPath(); ctx.ellipse(0, 1, 13, 3.4, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#7b5a37'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-2.5, -31); ctx.moveTo(10, 0); ctx.lineTo(2.5, -31); ctx.stroke();   // chân chữ A
+    ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-7, -31); ctx.lineTo(7, -31); ctx.stroke();                                         // xà ngang
+    ctx.save(); ctx.translate(0, -31); ctx.rotate(Math.sin(time * 14) * pr.wob * 0.14);                                                                                // đung đưa khi trúng hồng tâm
+    ctx.strokeStyle = '#8a6a44'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-6, oy - 4); ctx.moveTo(0, 0); ctx.lineTo(6, oy - 4); ctx.stroke();   // dây treo
+    const cols = ['#f1e6c8', '#c9503f', '#f1e6c8', '#c9503f', '#e8b832'];
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(1.5, oy + 1, R * 0.9, R, 0, 0, TAU); ctx.fill();
+    for (let k = 0; k < 5; k++) { const r = R * (1 - k * 0.2); ctx.fillStyle = cols[k]; ctx.beginPath(); ctx.ellipse(0, oy, r * 0.9, r, 0, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, oy, R * 0.9, R, 0, 0, TAU); ctx.stroke();
+    for (const a of pr.arrows) if (a.on) arrow(a.x, oy + a.y, a.x + 10 * face, oy + a.y - 0.6);   // mũi trúng hồng tâm (theo hồng tâm đung đưa)
+    ctx.restore();
+    for (const a of pr.arrows) if (!a.on) arrow(a.x, a.y, a.x + 5 * face, a.y - 8);        // mũi trượt: cắm xiên xuống cỏ phía sau giá
+    ctx.restore();
 }
 function drawArrow(b, j, x, y) {
     const p = Math.min(1, j.p), tx = j.ax - b.x, ty = j.ay - b.y, sx = 9 * b.dir, sy = -14;
@@ -9489,7 +9621,7 @@ canvas.addEventListener('pointermove', (e) => {
     if (ordArea && ordArea.id === e.pointerId) { ordAreaMove(e); return; }   // [G7] đang kéo vùng: không pan
     if (CWP.active) {   // [G1] Giao việc: ô xem trước xanh/đỏ bám con trỏ; kéo > 8px thì không tính là bấm
         if (ordTap && Math.hypot(e.clientX - ordTap.x, e.clientY - ordTap.y) > 8) ordTap = null;
-        if (e.pointerType === 'mouse') { CWP.mouse = { sx: e.clientX, sy: e.clientY }; if (CWP.mode !== 'order' || CWP.assist) { CWP.assistT = performance.now(); if (CWP.tool !== 'walk') { const a = cwpAnchor(e.clientX, e.clientY); CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy }; } } }   // [G11] ô xem trước chỉ bám con trỏ khi đang ở trạng thái giao việc
+        if (e.pointerType === 'mouse') { CWP.mouse = { sx: e.clientX, sy: e.clientY }; if (CWP.mode !== 'order' || CWP.assist) { CWP.assistT = performance.now(); if (CWP.tool !== 'walk' && !CWP.kp) { const a = cwpAnchor(e.clientX, e.clientY); CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy }; } } }   // [G11] [G25] bảng chọn mẫu đang mở: ô chọn đứng yên ô xem trước chỉ bám con trỏ khi đang ở trạng thái giao việc
     }
     if (ptrs.size >= 2) {          // [V76] hai ngón: zoom theo trung điểm + kéo theo trung điểm
         const p = pinchState();
@@ -10697,16 +10829,16 @@ function canBuildAt(c, finishing, fieldBuf) {   // [G24] fieldBuf: số ô tối
     return c.type === TYPE_GRASS && houseSpaceOK(c, finishing) && countAround(c.x, c.y, 1, TYPE_WATER) === 0 && !seaNear(c.x, c.y, 0)   /* [P10.5] nhà cách hồ / biển >= 1 ô (trước 2 ô) */
         && (counts[TYPE_FIELD] === 0 || countAround(c.x, c.y, fieldBuf === undefined ? FIELD_HOUSE_BUF : fieldBuf, TYPE_FIELD) === 0);   // [V90] nhà không mọc trong FIELD_HOUSE_BUF ô quanh ruộng (làng không lan về phía ruộng, ruộng không phải nhường nhà)
 }
-function canExtendLakeBase(c) {   // [V53] điều kiện vật lý (chưa tính rule kích thước): chỉ ô cỏ, không sát biển / ruộng / nhà
+function canExtendLakeBase(c, multiOK) {   // [G25] multiOK: người chơi được đào ô nằm giữa hai hồ (nhìn đã liền nhau); bot thì không   // [V53] điều kiện vật lý (chưa tính rule kích thước): chỉ ô cỏ, không sát biển / ruộng / nhà
     if (c.type !== TYPE_GRASS || seaNear(c.x, c.y, 2)) return false;   // [V7] hồ không sát biển
     if (countAround(c.x, c.y, FIELD_WATER_GAP, TYPE_FIELD) > 0) return false;   // [V11] hồ không nới sát ruộng
     if (hasAround(c.x, c.y, LAKE_TREE_GAP, TYPE_TREE)) return false;            // [V91] hồ không lấn vào cây (cây bị nước phủ sẽ bị phá sau 1 ngày)
     const nb = neighborLakes(c.x, c.y);
-    return nb.n > 0 && !nb.multi && lakeSize[nb.id] < MAX_LAKE &&
+    return nb.n > 0 && (multiOK || !nb.multi) && lakeSize[nb.id] < MAX_LAKE &&
         countAround(c.x, c.y, 1, TYPE_HOUSE) === 0;
 }
 function canExtendLake(c, byPlayer) {   // [G11d] byPlayer: lệnh của người chơi không bị rule kích thước hồ [V53] (rule đó chỉ để bot không rải hồ cùng cỡ)
-    if (!canExtendLakeBase(c)) return false;
+    if (!canExtendLakeBase(c, !!byPlayer)) return false;
     if (byPlayer) return true;
     const id = neighborLakes(c.x, c.y).id, ct = lakeCenter(id);
     if (!ct || lakeSizeOK(id, lakeSize[id] + 1, ct[0], ct[1])) return true;
@@ -13598,7 +13730,7 @@ function cwpCheckRaw(act, gx, gy) {
         if (footOwner[i]) return no('Thuộc công trình đặc biệt');
         const nb = neighborLakes(gx, gy);
         if (!nb.n) return no('Không sát hồ nào');
-        if (nb.multi) return no('Sát hai hồ: đào sẽ nối hai hồ lại');
+        // [G25] ô sát hai hồ: người chơi vẫn được đào (hai hồ nhìn đã liền nhau); chỉ bot không làm vậy
         if (lakeSize[nb.id] >= MAX_LAKE) return no('Hồ đã đạt kích thước tối đa');
         if (lkAt((gx + 0.5) * TILE_SIZE, (gy + 0.5) * TILE_SIZE) >= LK_WALK) return no('Ô này đã nằm trong mặt hồ');
         if (seaNear(gx, gy, 2)) return no('Quá gần biển (cách ≥ 3 ô)');
@@ -13868,7 +14000,7 @@ function cwpAnchor(sx, sy) {
 }
 function cwpSetTool(id, quiet) {
     if (!CWP.active || !CWP_TOOLS.some(t => t.id === id) || (CWP.mode === 'order' && id === 'walk')) return;
-    cwpRMClose(); CWP.tool = id; CWP.prev = null; ordArea = null; cwpTbtnSync(); ordToolSync();
+    cwpRMClose(); cwpKpClose(); CWP.tool = id; CWP.prev = null; ordArea = null; cwpTbtnSync(); ordToolSync();
     if (CWP.assist) CWP.assistT = performance.now();   // [G11]   // [P10.4] [G7]   // [P10.3a]
     if (cwpBarEl) cwpBarEl.querySelectorAll('.cwp-tb').forEach(b => b.classList.toggle('on', b.dataset.t === id));
     if (id !== 'walk' && !quiet) cwpToast(CWP_TOOLS.find(t => t.id === id).name + ': ' + (CWP.mode === 'order' ? ((CWP.touchUI || matchMedia('(hover:none)').matches) ? 'chạm 2 lần để giao việc · giữ ngón = menu nhanh' : 'chuột phải: hiện/ẩn ô giao việc · chuột trái trên ô xanh: giao · nhấp đúp (khi đang ẩn) = menu nhanh') + (ORD_AREA_TOOLS[id] ? ' · kéo vùng: Shift+kéo' : '') : ((CWP.touchUI || matchMedia('(hover:none)').matches) ? 'chạm ô để xem, chạm lần nữa để xác nhận' : 'rê chuột xem ô xanh/đỏ, bấm chuột phải để xác nhận')), CWP.mode === 'order' ? 2600 : undefined);   // [G7]
@@ -13928,7 +14060,7 @@ function cwpToolSync() {
 }
 function cwpUiTick(time) {   // đồng hồ ngân sách: cập nhật 2 lần / giây
     if (!cwpBudEl) cwpToolsInit();
-    if (CWP.assist && performance.now() - CWP.assistT > ORD_ASSIST_IDLE) ordAssist(false);   // [G11] chuột đứng yên 10 giây: ẩn ô giao việc + thanh công cụ
+    if (CWP.assist && !CWP.kp && performance.now() - CWP.assistT > ORD_ASSIST_IDLE) ordAssist(false);   // [G11] chuột đứng yên 10 giây: ẩn ô giao việc + thanh công cụ
     if (CWP.rm) { if (CWP.paused) cwpRMClose(); else cwpRMPos(); }   // [P10.4] menu bám theo ô khi camera di chuyển; đi bằng phím / cần thì đóng
     if (time - cwpBudT < 0.5) return; cwpBudT = time;
     const L = landTotal();
@@ -13977,6 +14109,7 @@ function cwpToolClick(sx, sy, touch, shift) {   // [G9] bấm ô ở chế độ
 //  Ô của lệnh: reserved + orderRef (bot tự chọn việc sẽ bỏ qua). Lệnh: 'pending' (chờ bot) -> 'taken' (đang đi/làm) -> xong thì xoá.
 //  Không sửa ruột Bot: chỉ bọc finishWork / abortTask và thêm tryOrderTask (1 dòng gọi trong findTask).
 // ======================================================================
+var ordKindTmp = null;   // [G25] loại nhà chọn từ bảng Ctrl+bấm, chỉ dùng lúc đang tạo lệnh
 var ORDERS = [], ORDER_REACH = 60, ORDER_MAX = 20, ORDER_TTL = 900, ORDER_BOT_CAP = 0.4, orderSeq = 0, ordTap = null;
 CWP.ordStat = { placed: 0, done: 0, cancel: 0 };   // [G8] thống kê lệnh bạn giao: đã đặt / hoàn thành / bị hủy
 const ORD_MILES = [1, 5, 10, 25, 50, 100], ORD_GLOW_LIFE = 30, ORD_BUB_LIFE = 2.2, ORD_NUM_PX = 11;   // [G8] mốc thông báo · vòng sáng sau khi xong (giây thật) · bong bóng "!" (giây thật)
@@ -13999,7 +14132,7 @@ function orderCancel(o, msg) {
 }
 // [G4] kiểu nhà (thường, không đặc biệt) chốt cho ô: lệnh xây dùng đúng kiểu này nên ô xanh/đỏ kiểm đúng kích thước nhà
 function ordVar(c, re) {
-    const key = CWP.ordKind || '';
+    const ro = c.orderRef, key = (ro && !ro.dead && ro.kind !== undefined) ? ro.kind : (ordKindTmp !== null ? ordKindTmp : (CWP.ordKind || ''));   // [G25] lệnh có chọn loại riêng thì dùng loại đó
     if (!c.ordHv || re || c.ordHv.k !== key) {   // [G7] đổi kiểu nhà đã chọn => chốt lại cho ô
         let v = key ? ordKindPick(key) : -1;
         if (v < 0) for (let k = 0; k < 6 && (v < 0 || HOUSE_VARIANTS[v].special); k++) v = pickHouseVariant(c.y, c);
@@ -14082,11 +14215,13 @@ function orderPlace(act, gx, gy, opts) {
 // [G7] tạo lệnh (không toast lỗi): dùng chung cho bấm ô, menu nhanh và kéo vùng. opts: { urgent, quiet }
 function orderCreate(act, gx, gy, opts) {
     const c0 = grid[gx][gy]; let r, hv = null;
-    if (act === 'build') { for (let k = 0; k < 4; k++) { hv = ordVar(c0, k > 0); r = cwpCheck(act, gx, gy); if (r.ok) break; } }   // [G4] thử tối đa 4 kiểu nhà (nhà nhỏ hơn có thể vừa chỗ)
+    if (act === 'build') { ordKindTmp = (opts && opts.kind !== undefined) ? opts.kind : null; try { for (let k = 0; k < 4; k++) { hv = ordVar(c0, k > 0); r = cwpCheck(act, gx, gy); if (r.ok) break; } } finally { ordKindTmp = null; } }   // [G4] thử tối đa 4 kiểu nhà (nhà nhỏ hơn có thể vừa chỗ)
     else r = cwpCheck(act, gx, gy);
     if (!r.ok) return r;
     const urgent = !!(opts && opts.urgent), quiet = !!(opts && opts.quiet);
     const o = { id: ++orderSeq, act, gx, gy, cells: r.cells, state: 'pending', bot: null, t0: simClock, age: 0, tries: 0, nextTry: 0, star: !!r.star, slotType: r.slotType, z: r.z, from: c0.type, hv: hv ? { v: hv.v, s: hv.s } : null, urgent: urgent };
+    if (opts && opts.kind !== undefined) o.kind = opts.kind;          // [G25] loại nhà đã chọn
+    if (opts && opts.treeVars) o.treeVars = opts.treeVars;            // [G25] nhóm cây đã chọn
     if (o.star) { const s = CWP.slot[o.slotType]; s.used = true; s.z = o.z; if (!quiet) cwpToast('★ Dùng suất đặc cách'); }
     ORDERS.push(o); CWP.ordStat.placed++;   // [G8]
     for (const p of o.cells) { const c = grid[p[0]][p[1]]; c.reserved = true; c.orderRef = o; }
@@ -14120,6 +14255,7 @@ function ordCellAt(sx, sy) {
 }
 function ordPtrDown(e) {   // true = đã xử lý, không pan
     if (CWP.rm) { cwpRMClose(); ordTap = null; ordArea = null; cwpLPClear(); isDragging = false; return true; }   // menu đang mở: bấm ra ngoài chỉ đóng menu
+    if (CWP.kp) { cwpKpClose(); ordTap = null; ordArea = null; cwpLPClear(); isDragging = false; return true; }   // [G25] bảng chọn mẫu đang mở: bấm ra ngoài chỉ đóng bảng
     if (ptrs.size >= 2) { ordArea = null; ordTap = null; cwpLPClear(); return false; }   // hai ngón: zoom như cũ
     if (CWP.paused) return false;
     if (e.button === 0 && ORD_AREA_TOOLS[CWP.tool] && (ordAreaOn || (e.shiftKey && e.pointerType === 'mouse'))) {
@@ -14307,7 +14443,7 @@ function orderDraw(time) {
 var ORD_ASSIST_IDLE = 10000;
 CWP.assist = false; CWP.assistT = 0;
 function ordAssist(on, ptr) {
-    on = !!on; const was = !!CWP.assist; CWP.assist = on;
+    on = !!on; const was = !!CWP.assist; CWP.assist = on; if (!on) cwpKpClose();   // [G25] tắt ô giao việc thì đóng luôn bảng chọn mẫu
     if (on) { CWP.assistT = performance.now(); if (ptr && CWP.tool !== 'walk') { const a = cwpAnchor(ptr.x, ptr.y); CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy }; } }
     else if (was) CWP.prev = null;
     if (was !== on) document.body.classList.toggle('cwp-assist', on);
@@ -14371,6 +14507,7 @@ function orderTap(e) {   // [G12] chuột: phải = hiện/ẩn ô giao việc, 
             const a = cwpAnchor(e.clientX, e.clientY), nw = performance.now(), key = a.ax + ',' + a.ay;
             if (orderTap.last && orderTap.last.k === key && nw - orderTap.last.t < 400) return;   // chốt 400ms: chống bấm đúp cùng ô làm đặt rồi hủy
             orderTap.last = { k: key, t: nw };
+            if (e.ctrlKey && (CWP.tool === 'plant' || CWP.tool === 'build') && !ORDERS.some(o => o.cells.some(p => p[0] === a.ax && p[1] === a.ay))) { CWP.assistT = nw; cwpKpOpen(CWP.tool, a); return; }   // [G25] Ctrl + bấm: bảng chọn loại cây / nhà
             CWP.assistT = nw; cwpToolClick(e.clientX, e.clientY, false, e.shiftKey);
         }
         return;
@@ -14552,6 +14689,89 @@ const CWP_HOUSES = (() => {
 })();
 const CWP_KINDS = ['gable', 'castle', 'round', 'dutch', 'tudor', 'hip', 'old'].filter(k => CWP_HOUSES[k]);
 Object.keys(CWP_HOUSES).forEach(k => { if (!CWP_KINDS.includes(k)) CWP_KINDS.push(k); });
+
+// ======================================================================
+//  [G25] CTRL + BẤM Ô CHỌN = BẢNG CHỌN MẪU. Công cụ 🌳 Trồng: chọn LOẠI cây; công cụ 🏠 Xây nhà: chọn LOẠI nhà.
+//  Chỉ chọn loại; màu / biến thể trong loại là ngẫu nhiên. Mỗi ô = 80% cỡ nút trên thanh 4 hành động; bảng nằm ngay trên thanh, căn giữa theo thanh.
+//  [G26] Bảng chỉ gồm các ô ảnh mẫu đứng cạnh nhau (không nền, không chữ; rê chuột để xem tên). Chọn xong => giao lệnh cho đúng ô đã bấm (Shift khi chọn = lệnh khẩn). Esc / bấm ra ngoài / đổi công cụ = đóng.
+// ======================================================================
+const CWP_TREE_GROUPS = [
+    ['Tán tròn', [0, 1, 2, 3, 4, 16, 17]], ['Thông', [5, 6, 7, 8, 12, 13, 14]], ['Dương', [9, 10, 11]], ['Tán rộng', [15]],
+    ['Tán vòm', [18, 19, 20, 21, 22, 23, 24]], ['Cây trứng', [25, 26, 27, 28]], ['Cây sen', [29]], ['Cây cọ', [30]], ['Hoa thị', [31]],
+    ['Nhiều tầng', [32, 33, 34, 35, 36]], ['Bạch dương', [37, 47]], ['Liễu rủ', [41]], ['Cây táo', [42]], ['Cây cam', [43]], ['Anh đào', [44]],
+    ['Trụi lá', [45]], ['Bụi tre', [48]], ['Tre ngà', [50, 51]], ['Cây đước', [49]]
+].map(g => ({ label: g[0], vars: g[1].filter(i => i < TREE_VARIANTS.length) })).filter(g => g.vars.length);   // bỏ các cây phủ tuyết (38-40, 46)
+var cwpKpEl = null;
+function cwpKpClose() { if (!CWP.kp) return; CWP.kp = null; if (cwpKpEl) cwpKpEl.style.display = 'none'; }
+function cwpKpThumb(cv, sp, w, h) {   // vẽ sprite (cắt bỏ phần trống quanh hình) vừa khít ô
+    const dpr = window.devicePixelRatio || 1; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    if (!sp || !sp.c) return;
+    try {
+        if (!sp.bb) {
+            const W = sp.c.width, H = sp.c.height, d = sp.c.getContext('2d').getImageData(0, 0, W, H).data;
+            let x0 = W, y0 = H, x1 = -1, y1 = -1;
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            sp.bb = x1 < 0 ? { x: 0, y: 0, w: W, h: H } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+        }
+        const b = sp.bb, k = Math.min((cv.width - 6 * dpr) / b.w, (cv.height - 6 * dpr) / b.h), dw = b.w * k, dh = b.h * k;
+        cv.getContext('2d').drawImage(sp.c, b.x, b.y, b.w, b.h, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+    } catch (e) { }
+}
+function cwpKpOpen(act, a) {
+    if (!cwpKpEl) {
+        const st = document.createElement('style');
+        st.textContent = '#cwp-kp{position:fixed;z-index:8;display:none;max-width:min(92vw,560px);-webkit-user-select:none;user-select:none}' +
+            '#cwp-kp .g{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}' +
+            '#cwp-kp canvas{position:static;inset:auto;width:auto;height:auto;pointer-events:none;cursor:pointer}' +   // CSS chung của game ép mọi canvas phủ kín màn hình => phải đặt lại cho ảnh mẫu
+            '#cwp-kp .kb{width:var(--kw);height:var(--kh);padding:0;border:1px solid rgba(60,50,30,.15);border-radius:10px;background:rgba(255,252,244,.95);box-shadow:0 2px 6px rgba(0,0,0,.28);cursor:pointer;display:flex;align-items:center;justify-content:center}' +
+            '#cwp-kp .kb:hover{border-color:#4e7a57;background:#e6f3e6}#cwp-kp .kb:disabled{filter:grayscale(1);opacity:.45;cursor:not-allowed}';
+        document.head.appendChild(st);
+        cwpKpEl = document.createElement('div'); cwpKpEl.id = 'cwp-kp';
+        cwpKpEl.innerHTML = '<div class="g"></div>';
+        cwpKpEl.addEventListener('contextmenu', (e) => e.preventDefault());
+        ['pointerdown', 'pointerup'].forEach(n => cwpKpEl.addEventListener(n, (e) => e.stopPropagation()));
+        ['pointermove', 'pointerdown'].forEach(n => cwpKpEl.addEventListener(n, () => { if (CWP.assist) CWP.assistT = performance.now(); }));
+        cwpKpEl.addEventListener('click', (e) => {
+            const b = e.target.closest('.kb'), kp = CWP.kp; if (!b || !kp || b.disabled) return;
+            const opts = { urgent: e.shiftKey || ordUrgentOn };
+            if (kp.act === 'plant') opts.treeVars = CWP_TREE_GROUPS[+b.dataset.i].vars; else opts.kind = b.dataset.k;
+            const act2 = kp.act, ax = kp.ax, ay = kp.ay;
+            cwpKpClose();
+            orderPlace(act2, ax, ay, opts);
+        });
+        document.body.appendChild(cwpKpEl);
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && CWP.kp) cwpKpClose(); });
+    }
+    cwpRMClose();
+    const bar = cwpBarEl, tb = bar && bar.querySelector('.cwp-tb');
+    let cw = tb ? tb.offsetWidth : 0, ch = tb ? tb.offsetHeight : 0; if (!cw || !ch) { cw = 76; ch = 46; }
+    const w = Math.round(cw * 0.8), h = Math.round(ch * 0.8);   // mỗi ô = 80% nút hành động
+    cwpKpEl.style.setProperty('--kw', w + 'px'); cwpKpEl.style.setProperty('--kh', h + 'px');
+    const grid2 = cwpKpEl.querySelector('.g'); grid2.textContent = '';
+    let set = null; try { set = getSpriteSet(); } catch (e) { }
+    if (act === 'plant') {
+        CWP_TREE_GROUPS.forEach((g, i) => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'kb'; b.dataset.i = i; b.title = g.label;
+            const cv = document.createElement('canvas'); b.appendChild(cv); grid2.appendChild(b);
+            cwpKpThumb(cv, set && set.trees[g.vars[0]], w, h);
+        });
+    } else {
+        CWP_KINDS.forEach(k => {
+            const all = CWP_HOUSES[k] || [], ok = all.filter(i => (HOUSE_VARIANTS[i].unlock || 0) <= houseAdults());
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'kb'; b.dataset.k = k; b.disabled = !ok.length;
+            b.title = (CWP_KIND_LABEL[k] || k) + (ok.length ? '' : ' 🔒 chưa mở khóa');
+            const cv = document.createElement('canvas'); b.appendChild(cv); grid2.appendChild(b);
+            let sp = null; try { sp = set && houseSprite(set, (ok[0] !== undefined ? ok[0] : all[0])); } catch (e) { }
+            cwpKpThumb(cv, sp, w, h);
+        });
+    }
+    CWP.kp = { act, ax: a.ax, ay: a.ay };
+    CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy };   // ô chọn đứng yên ở ô đã bấm
+    cwpKpEl.style.display = 'flex';
+    const r = bar ? bar.getBoundingClientRect() : null, cx = r && r.width ? r.left + r.width / 2 : innerWidth / 2;
+    cwpKpEl.style.left = Math.max(6, Math.min(innerWidth - cwpKpEl.offsetWidth - 6, cx - cwpKpEl.offsetWidth / 2)) + 'px';   // căn giữa theo thanh hành động
+    cwpKpEl.style.bottom = (r && r.height ? innerHeight - r.top + 10 : 96) + 'px';   // ngay phía trên thanh
+}
 
 (function cwpInit() {   // [G4] vào thẳng chế độ Giao việc: không nhân vật, không chọn nhà, camera tự do
     try {
