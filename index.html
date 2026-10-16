@@ -13514,7 +13514,7 @@ window.__cwLoading = true;   // [G17] vòng lặp game chỉ chạy sau khi đã
         spSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.dataset.sp === '1') === !!on));
     }
     spSeg.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setSP(b.dataset.sp === '1'); });
-    setSP(false);
+    setSP(true);
     if (!DN_FEATURE) { dnSeg.closest('.set-row').style.display = 'none'; nfSeg.closest('.set-row').style.display = 'none'; }   // [V40] ẩn công tắc ngày đêm / tua đêm
 })();
 
