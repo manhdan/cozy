@@ -4588,7 +4588,7 @@ class Bot {
         if (task === 'CHOP') duration = 3 + Math.random() * 7;
         else if (task === 'DIG') duration = 4 + Math.random() * 5;
         else if (task === 'POND') duration = 14 + Math.random() * 8;
-        else if (task === 'PLANT') duration = 1 + Math.random() * 3;
+        else if (task === 'PLANT') duration = 2 + Math.random() * 6;
         else if (task === 'BUILD') duration = 10 + Math.random() * 30;
         else if (task === 'DEMOLISH') duration = 6 + Math.random() * 6;
         else if (task === 'FARM') duration = FARM_DUR[0] + Math.random() * (FARM_DUR[1] - FARM_DUR[0]);   // [V62] cuốc + gieo + tưới
@@ -5437,7 +5437,7 @@ class Bot {
         const plan = this.planPath(job.c, job.task);
         if (!plan) { vtSkip.set(job.c.y * GRID_W + job.c.x, simClock + 30); return false; }   // không có đường: thử lại sau 30 giây
         if (job.task === 'CHOP') this.startChop(job.c, plan);
-        else this.startArchTask(job.c, 'PLANT', plan, 1 + Math.random() * 3);
+        else this.startArchTask(job.c, 'PLANT', plan, 2 + Math.random() * 6);
         return true;
     }
     // [V46] Phá nhà hết tuổi thọ: lấy nhà hết tuổi gần nhất (bỏ qua mức tối thiểu của dải tỉ lệ và cơ chế "nhà mới được giữ")
@@ -14366,7 +14366,7 @@ Bot.prototype.tryOrderTask = function (only) {   // [G12] only: chỉ nhận l�
         const task = CWP_TASK[o.act], plan = this.planPath(c, task);
         if (!plan) { fail('không có đường'); continue; }
         let dur = 3;
-        if (task === 'CHOP') dur = 3 + Math.random() * 7; else if (task === 'DIG') dur = 4 + Math.random() * 5; else if (task === 'POND') dur = 14 + Math.random() * 8; else if (task === 'PLANT') dur = 1 + Math.random() * 3;
+        if (task === 'CHOP') dur = 3 + Math.random() * 7; else if (task === 'DIG') dur = 4 + Math.random() * 5; else if (task === 'POND') dur = 14 + Math.random() * 8; else if (task === 'PLANT') dur = 2 + Math.random() * 6;
         else if (task === 'BUILD') dur = 10 + Math.random() * 30; else if (task === 'DEMOLISH') dur = 6 + Math.random() * 6;
         else if (task === 'FARM') dur = FARM_DUR[0] + Math.random() * (FARM_DUR[1] - FARM_DUR[0]);
         else if (task === 'FIX') dur = c.type === TYPE_HOUSE ? 12 + Math.random() * 8 : c.type === TYPE_TREE ? 5 + Math.random() * 4 : REPLANT_DUR[0] + Math.random() * (REPLANT_DUR[1] - REPLANT_DUR[0]);
