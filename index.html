@@ -5065,8 +5065,9 @@ class Bot {
     // [V86] Thuyền đậu ở bến khi ngư dân quay về tránh bão: vẫn vẽ ở bến cho tới khi ngư dân ra khơi lại
     moorBoat(j) {
         this.unmoor(); this.moorSpot = j.spot;
-        mooredBoats.push({ boat: true, owner: this, spot: j.spot, x: j.lane.dock.x, y: j.lane.dock.y, dir: this.dir || 1, boatIdx: this.boatIdx | 0, animTimer: this.animTimer, pop: 1, jb: null, bRaw: 0, bTgt: 0 });
-        rebuildMoorKeep();   // [V105] giữ biển quanh bến, không cho đất lấn vào
+        mooredBoats.push({ boat: true, owner: this, spot: j.spot, x: j.lane.dock.x, y: j.lane.dock.y, dir: this.dir || 1, boatIdx: this.boatIdx | 0, animTimer: this.animTimer, pop: 1, jb: null, bRaw: 0, bTgt: 0, st: null });
+        rebuildMoorKeep();   // [G41] không còn giữ biển quanh bến
+        if (emerging.length) evacuateMoored(emerging.filter(i => landFlag[i] && landT[i] < 1));   // [G41] vừa đậu giữa lúc đất đang trồi gần bến: ra khơi ngay
     }
     unmoor() { let n = 0; for (let i = mooredBoats.length - 1; i >= 0; i--) if (mooredBoats[i].owner === this) { mooredBoats.splice(i, 1); n++; } if (n) rebuildMoorKeep(); }
     // Không về được nhà (không có nhà gần / không có đường): thử vài lần rồi ngủ ngay tại chỗ (ẩn đi) thay vì đứng làm việc trong bóng tối
@@ -5976,8 +5977,8 @@ class Bot {
 
     // --- ngư dân ---
     startFish() {
-        const cs = Array.from(pickShoreSpots(this, seaShore, null, true, 0, 0, 4)), ms = this.moorSpot; this.moorSpot = null;
-        if (ms && seaShore.includes(ms) && !shoreTaken.has(ms.y * GRID_W + ms.x)) cs.unshift(ms);   // [V86] thuyền đang đậu ở bến: ra khơi lại từ chính bến đó
+        const cs = Array.from(pickShoreSpots(this, seaShore, null, true, 0, 0, 4)), ms0 = this.moorSpot, ms = ms0 ? seaShore.find(q => q.x === ms0.x && q.y === ms0.y) : null; this.moorSpot = null;   // [G41] so theo toạ độ (seaShore dựng lại mỗi 3 giây nên so tham chiếu hầu như luôn trượt)
+        if (ms && !shoreTaken.has(ms.y * GRID_W + ms.x)) cs.unshift(ms);   // [V86] thuyền đang đậu ở bến: ra khơi lại từ chính bến đó
         for (const s of cs) {
             const lane = seaLane(s); if (!lane) continue;
             const plan = this.planBreakPath(s); if (!plan) continue;
@@ -12267,41 +12268,125 @@ const blurA = new Float32Array(N_CELLS), blurB = new Float32Array(N_CELLS);
 const cfield = new Float32Array(CF_W * CF_H);
 const seaDist = new Float32Array(N_CELLS);
 const seaKeep = new Uint8Array(N_CELLS);       // [V14] 1 = ô biển GIỮ VĨNH VIỄN (bờ lượn, vịnh, eo biển): đất không bao giờ lan vào
-const mooredKeep = new Uint8Array(N_CELLS);    // [V105] 1 = ô biển quanh thuyền đang đậu ở bến: đất không lấn vào (tránh thuyền mắc cạn)
 const mooredSpotOwner = new Map();             // [V105] ô bờ nơi thuyền đậu => ngư dân chủ thuyền (người khác không chọn ô này để nghỉ / câu)
-// [G19] Kênh nước nối bến ra biển giữ vĩnh viễn (seaKeep): BFS 4 hướng qua ô biển còn trống, rồi giữ đường đi + 1 ô mỗi bên (rộng 3 ô).
-//        Trước đây chỉ giữ ô vuông 5x5 quanh bến => đất lấn kín xung quanh, thuyền thành "hồ" cô lập toàn bãi cát. Trả về false nếu bến đã bị vây kín.
-function keepMoorChannel(cx, cy) {
-    const s0 = cy * GRID_W + cx;
-    if (cx < 0 || cy < 0 || cx >= GRID_W || cy >= GRID_H || landFlag[s0]) return false;
-    const par = new Int32Array(N_CELLS).fill(-2), q = [s0]; par[s0] = -1;
-    let goal = -1;
-    for (let h = 0; h < q.length; h++) {
-        const i = q[h];
-        if (seaKeep[i]) { goal = i; break; }
-        const x = i % GRID_W, y = (i / GRID_W) | 0;
-        const nb = [x > 0 ? i - 1 : -1, x < GRID_W - 1 ? i + 1 : -1, y > 0 ? i - GRID_W : -1, y < GRID_H - 1 ? i + GRID_W : -1];
-        for (const j of nb) if (j >= 0 && par[j] === -2 && !landFlag[j]) { par[j] = i; q.push(j); }
+// [G41] KHÔNG còn giữ vùng biển / kênh nước quanh thuyền đậu (mooredKeep và keepMoorChannel đã bỏ: chính chúng tạo ra "lạch nước" xấu khi đất lấn quanh bến).
+//       Thay bằng: khi một mảnh đất mới vừa được chọn (expandLand) mà nó sắp lấn tới bến / chặn đường ra khơi của thuyền đậu, thuyền tự chạy ra khơi (st = 'leave'),
+//       và đất bị TRÌ HOÃN trồi đủ lâu để thuyền kịp đi. Đất trồi xong thì thuyền chờ ngoài khơi (st = 'wait'), rồi chạy về bến MỚI gần bến cũ nhất (st = 'return'),
+//       chủ thuyền được gán lại moorSpot nên luôn quay lại được thuyền. Không còn bến / đường nào thì thuyền biến mất (chủ lấy thuyền mới khi ra khơi lại).
+const MOOR_EVAC_R = 3;          // đất sắp lấn trong bán kính này (ô) quanh thuyền => thuyền ra khơi
+const MOOR_EVAC_SPEED = 2.2;    // hệ số tốc độ (so với BOAT_SPEED) khi chạy ra khơi / về bến mới
+const MOOR_EVAC_MARGIN = 2.5;   // giây dư thêm trước khi đất trồi
+const MOOR_EVAC_MAXT = 30;      // trần thời gian trì hoãn đất trồi (giây game)
+const MOOR_SETTLE = 3.5;        // đất trồi xong bao lâu thì thuyền được tìm bến mới (rebuildShore chạy mỗi 3 giây)
+const MOOR_WAIT_MAX = 120;      // chờ ngoài khơi quá lâu mà không có bến thì bỏ thuyền
+function moorPathLen(x, y, p) { let L = 0, px = x, py = y; for (const w of p) { L += Math.hypot(w.x - px, w.y - py); px = w.x; py = w.y; } return L; }
+function moorEvacTargets(m) {   // vài điểm ngoài khơi (theo bản đồ ĐÃ có đất mới) cách đất >= 5 ô, tránh tàu khác; điểm tốt nhất trước
+    const T = TILE_SIZE, bx = m.x / T, by = m.y / T, out = [];
+    for (let k = 0; k < 40; k++) {
+        const a = Math.random() * TAU, r = 6 + Math.random() * 7;
+        const cx = Math.floor(bx + Math.cos(a) * r), cy = Math.floor(by + Math.sin(a) * r);
+        if (cx < 4 || cy < 4 || cx >= GRID_W - 4 || cy >= GRID_H - 4 || !boatCellOK(cx, cy)) continue;
+        const ld = landDist(cx, cy, 6); if (ld < 5) continue;
+        let ok = true;
+        for (const o of bots) if (o.boat && Math.hypot(o.x / T - cx, o.y / T - cy) < 5) { ok = false; break; }
+        if (ok) for (const o of mooredBoats) if (o !== m && Math.hypot(o.x / T - cx, o.y / T - cy) < 4) { ok = false; break; }
+        if (ok) out.push({ x: (cx + 0.5) * T, y: (cy + 0.5) * T, sc: ld - 0.25 * r + Math.random() * 0.8 });
     }
-    if (goal < 0) return false;
-    for (let i = goal; i >= 0; i = par[i]) {
-        const x = i % GRID_W, y = (i / GRID_W) | 0;
-        for (let a = x - 1; a <= x + 1; a++) for (let b = y - 1; b <= y + 1; b++)
-            if (a >= 0 && b >= 0 && a < GRID_W && b < GRID_H) mooredKeep[b * GRID_W + a] = 1;
-    }
-    return true;
+    out.sort((p, q) => q.sc - p.sc);
+    return out.slice(0, 6);
 }
-function rebuildMoorKeep() {                   // [V105] dựng lại từ danh sách mooredBoats: vùng giữ biển bán kính 2 ô quanh bến + ô bờ của thuyền   // [G19] + kênh nước ra biển khơi; bến bị vây kín thì bỏ thuyền đó
-    mooredKeep.fill(0); mooredSpotOwner.clear();
-    let dropped = false;
+// cells = các ô sắp thành đất (landFlag = 1 nhưng chưa trồi). Gọi ngay sau khi chọn mảnh đất mới (và khi có thuyền vừa đậu giữa lúc đất đang trồi).
+function evacuateMoored(cells) {
+    if (!mooredBoats.length || !cells.length) return;
+    const T = TILE_SIZE, ps = new Set(cells), hit = [];
+    for (const m of mooredBoats) {
+        const cx = Math.floor(m.x / T), cy = Math.floor(m.y / T);
+        let near = false;
+        for (let a = cx - MOOR_EVAC_R; a <= cx + MOOR_EVAC_R && !near; a++) {
+            if (a < 0 || a >= GRID_W) continue;
+            for (let b = cy - MOOR_EVAC_R; b <= cy + MOOR_EVAC_R; b++) if (b >= 0 && b < GRID_H && ps.has(b * GRID_W + a)) { near = true; break; }
+        }
+        const tg = moorEvacTargets(m);
+        if (!near) {   // đất không chạm bến, nhưng đường ra khơi còn không (bị đất mới vây)?
+            if (!tg.length) continue;
+            let ok = false;
+            for (let k = 0; k < Math.min(2, tg.length) && !ok; k++) ok = !!boatPath(m.x, m.y, tg[k].x, tg[k].y);
+            if (ok) continue;
+        }
+        hit.push({ m, tg, p: null });
+    }
+    if (!hit.length) return;
+    const was = [];
+    for (const i of cells) if (landFlag[i] && landT[i] === 0) { landFlag[i] = 0; was.push(i); }   // tạm coi đất mới là biển để dò đường ra khơi xuyên qua vùng sắp thành đất
+    let maxT = 0;
+    for (const h of hit) {
+        for (const t of h.tg) { h.p = boatPath(h.m.x, h.m.y, t.x, t.y); if (h.p) break; }
+        if (h.p) maxT = Math.max(maxT, moorPathLen(h.m.x, h.m.y, h.p) / (BOAT_SPEED * MOOR_EVAC_SPEED));
+    }
+    for (const i of was) landFlag[i] = 1;
+    if (maxT > 0) { const delay = Math.min(MOOR_EVAC_MAXT, maxT + MOOR_EVAC_MARGIN); for (const i of cells) if (landT[i] === 0) emDelay[i] += delay; }   // đất chưa kịp trồi thì lùi lại cho thuyền chạy
+    for (const h of hit) {
+        const m = h.m;
+        if (!h.p) { const k = mooredBoats.indexOf(m); if (k >= 0) mooredBoats.splice(k, 1); if (m.owner && m.spot && m.owner.moorSpot === m.spot) m.owner.moorSpot = null; continue; }   // không có đường ra khơi: bỏ thuyền
+        if (!m.spot0) m.spot0 = m.spot;
+        m.st = 'leave'; m.wp = h.p; m.wi = 0; m.wait = 0; m.settle = 0; m.retryT = 0; m.jb = { mv: true, phase: 'evac', net: 0, load: null };
+        if (m.owner) m.owner.moorSpot = null;
+    }
+    rebuildMoorKeep();
+}
+function moorSail(m, tx, ty, dt, k) {   // giống Bot.sail nhưng cho thuyền đậu
+    const dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy);
+    if (d < 2) return true;
+    if (Math.abs(dx) > 0.5) m.dir = dx > 0 ? 1 : -1;
+    m.bTgt = Math.atan2(dy, Math.max(Math.abs(dx), 1e-3));
+    const s = Math.min(d, BOAT_SPEED * k * dt); m.x += dx / d * s; m.y += dy / d * s; return false;
+}
+function moorRelocate(m) {   // thuyền đang chờ ngoài khơi: chọn bến mới gần bến cũ nhất (có đường ra khơi + có đường thuyền tới), chạy về đó
+    const T = TILE_SIZE, o = m.owner, r = m.spot0 || m.spot;
+    const list = seaShore.filter(s => !shoreTaken.has(s.y * GRID_W + s.x) && !mooredSpotOwner.has(s.y * GRID_W + s.x));
+    if (r) { const dd = new Map(); for (const s of list) dd.set(s, (s.x - r.x) * (s.x - r.x) + (s.y - r.y) * (s.y - r.y)); list.sort((a, b) => dd.get(a) - dd.get(b)); }
+    let tries = 0;
+    for (const s of list) {
+        if (++tries > 30) break;
+        const lane = seaLane(s); if (!lane) continue;
+        const d = lane.dock;
+        let ok = true;
+        for (const o2 of mooredBoats) if (o2 !== m && Math.hypot(o2.x - d.x, o2.y - d.y) < 3 * T) { ok = false; break; }
+        if (!ok) continue;
+        const p = boatPath(m.x, m.y, d.x, d.y); if (!p) continue;
+        m.spot = s; m.wp = p; m.wi = 0; m.st = 'return'; m.jb = { mv: true, phase: 'evac', net: 0, load: null };
+        mooredSpotOwner.set(s.y * GRID_W + s.x, o); if (o) o.moorSpot = s;
+        return true;
+    }
+    return false;
+}
+function moorBoatsTick(dt) {   // mỗi frame: thuyền đang ra khơi / chờ / về bến mới
+    if (!mooredBoats.length) return;
+    let ch = false;
     for (let k = mooredBoats.length - 1; k >= 0; k--) {
         const m = mooredBoats[k];
-        const cx = Math.floor(m.x / TILE_SIZE), cy = Math.floor(m.y / TILE_SIZE);
-        for (let a = cx - 2; a <= cx + 2; a++) for (let b = cy - 2; b <= cy + 2; b++) if (a >= 0 && b >= 0 && a < GRID_W && b < GRID_H) mooredKeep[b * GRID_W + a] = 1;
-        if (!keepMoorChannel(cx, cy)) { mooredBoats.splice(k, 1); dropped = true; continue; }   // [G19] không còn đường ra biển: thuyền biến mất, ao cát cô lập sẽ được đất lấp ở lần lấn kế tiếp
-        if (m.spot) mooredSpotOwner.set(m.spot.y * GRID_W + m.spot.x, m.owner);
+        if (!m.st) continue;
+        if (m.st === 'leave' || m.st === 'return') {
+            const w = m.wp && m.wp[m.wi];
+            if (w && moorSail(m, w.x, w.y, dt, MOOR_EVAC_SPEED)) m.wi++;
+            if (!m.wp || m.wi >= m.wp.length) {
+                m.wp = null; m.jb = null;
+                if (m.st === 'leave') { m.st = 'wait'; m.wait = 0; m.settle = 0; m.retryT = 0; }
+                else { m.st = null; ch = true; }
+            }
+        } else if (m.st === 'wait') {
+            m.wait += dt;
+            if (emerging.length) m.settle = 0; else m.settle += dt;
+            if (m.retryT > 0) m.retryT -= dt;
+            if (m.settle >= MOOR_SETTLE && m.retryT <= 0) { if (moorRelocate(m)) ch = true; else m.retryT = 3; }
+            if (m.st === 'wait' && m.wait >= MOOR_WAIT_MAX) { mooredBoats.splice(k, 1); ch = true; }
+        }
     }
-    if (dropped) rebuildMoorKeep();   // dựng lại không còn thuyền bị vây (mỗi lần gọi chỉ bớt thuyền nên không lặp vô hạn)
+    if (ch) rebuildMoorKeep();
+}
+function rebuildMoorKeep() {                   // [G41] chỉ dựng lại bảng "ô bờ nơi thuyền đậu => chủ thuyền" (thuyền đang ra khơi / chờ thì chưa chiếm ô bờ nào)
+    mooredSpotOwner.clear();
+    for (const m of mooredBoats) if (m.spot && m.st !== 'leave' && m.st !== 'wait') mooredSpotOwner.set(m.spot.y * GRID_W + m.spot.x, m.owner);
 }
 const keepDist = new Uint8Array(N_CELLS);      // [V14] khoảng cách (4 hướng) tới ô biển giữ gần nhất
 const emerging = [];
@@ -12358,7 +12443,7 @@ function floodSeaFromBorder() {          // 1 = biển nối với mép bản đ
 function fillEnclosed(out) {
     const seen = floodSeaFromBorder();
     let n = 0;
-    for (let i = 0; i < N_CELLS; i++) if (!landFlag[i] && !seen[i] && !seaKeep[i] && !mooredKeep[i]) { landFlag[i] = 1; if (out) out.push(i); n++; }
+    for (let i = 0; i < N_CELLS; i++) if (!landFlag[i] && !seen[i] && !seaKeep[i]) { landFlag[i] = 1; if (out) out.push(i); n++; }
     return n;
 }
 function fixThin(out) {
@@ -12366,7 +12451,7 @@ function fixThin(out) {
         let ch = 0;
         for (let x = SEA_MARGIN; x < GRID_W - SEA_MARGIN; x++) for (let y = SEA_MARGIN; y < GRID_H - SEA_MARGIN; y++) {
             const i = y * GRID_W + x;
-            if (landFlag[i] || seaKeep[i] || mooredKeep[i]) continue;   // [V14] [V105]
+            if (landFlag[i] || seaKeep[i]) continue;   // [V14]
             const l = lf(x - 1, y), r = lf(x + 1, y), u = lf(x, y - 1), d = lf(x, y + 1);
             if (l + r + u + d >= 3 || (l && r) || (u && d)) { landFlag[i] = 1; if (out) out.push(i); ch++; }
         }
@@ -12614,7 +12699,7 @@ function expandLand(target) {
     const ci = [], cw = []; let tot = 0;
     for (let x = M; x < GRID_W - M; x++) for (let y = M; y < GRID_H - M; y++) {
         const i = y * GRID_W + x;
-        if (landFlag[i] || seaKeep[i] || mooredKeep[i]) continue;   // [V14] [V105]
+        if (landFlag[i] || seaKeep[i]) continue;   // [V14]
         const n4 = landN4(x, y); if (!n4) continue;
         const w = candWeight(x, y, n4, landN8(x, y));
         ci.push(i); cw.push(w); tot += w;
@@ -12632,7 +12717,7 @@ function expandLand(target) {
             for (const [a, b] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
                 if (a < M || b < M || a >= GRID_W - M || b >= GRID_H - M) continue;
                 const j = b * GRID_W + a;
-                if (landFlag[j] || seaKeep[j] || mooredKeep[j] || fr.has(j)) continue;   // [V14] [V105]
+                if (landFlag[j] || seaKeep[j] || fr.has(j)) continue;   // [V14]
                 fr.set(j, candWeight(a, b, landN4(a, b), landN8(a, b)));
             }
         }
@@ -12670,6 +12755,7 @@ function expandLand(target) {
         landT[i] = 0;
         emerging.push(i);
     }
+    evacuateMoored(patch);   // [G41] thuyền đậu gần mảnh đất mới tự ra khơi; đất trồi chậm lại cho thuyền kịp đi
     return patch.length;
 }
 function nearOpenSea(cx, cy, r) {
@@ -13966,6 +14052,7 @@ function updateWorld(dt, time) {
     campT -= dt; if (campT <= 0) { campT = 3; updateCampfires(); }   // [G34]
     campTalk(dt); dateTick(dt); houseTick(dt); rainReact(dt); loveTick(dt); bubTick(dt);   // [G35]
     updateJobs(dt);                                                           // [V21]
+    moorBoatsTick(dt);   // [G41]
     bots.forEach(b => b.update(dt));
     sweepGone();   // [V38] người già đã mất
     mapTimer -= dt; if (mapTimer <= 0) { mapTimer = 2; updateDeerMaps(false); }   // [V5] bản đồ rừng/nhà theo chunk, chỉ chunk đã đổi
