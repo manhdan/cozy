@@ -256,8 +256,7 @@
             <p class="stats" id="stats-line-me" style="display:none" title="Việc bạn đã làm: trồng cây · chặt cây · xây nhà · đào ao · khai ruộng · tưới · sửa · phá"></p>
         <div id="tl-guide">
             <h3>⌨️ Phím tắt (bấm vào dòng để dùng ngay)</h3>
-            <button type="button" class="tl-key" data-key="e"><kbd>E</kbd><span>🏝️ Mở rộng đảo ngay</span></button>
-            <button type="button" class="tl-key" data-key="v"><kbd>V</kbd><span>🏯 Hiện / ẩn ranh giới làng</span></button>
+            <button type="button" class="tl-key" data-key="\"><kbd>\</kbd><span>🏯 Hiện / ẩn ranh giới làng</span></button>
             <div class="tl-note">📖 <b>Hướng dẫn</b>: bấm nút <b>📖 Hướng dẫn</b> trong phần Cài đặt để xem lại từng bước bất cứ lúc nào.</div>
             <div class="tl-note">📋 <b>Giao việc</b>: <b>chuột phải</b> để bật/tắt chế độ giao việc, <b>cuộn chuột</b> để chuyển qua lại các loại việc.</div>
             <div class="tl-note">🌦️ Mưa / bão / ngập cần bật <b>Thời tiết</b> (và <b>Biến cố</b> cho bão, ngập) .</div>
@@ -543,7 +542,7 @@ const WILLOW_SHORE_R = 1, WILLOW_SHORE_MULT = 4, WILLOW_SHORE_CAP = 0.7, WILLOW_
 // [G31] CÂY DỪA: chỉ từ dải 3/8 (COCONUT_FROM) xuống 8/8. Cạnh hồ: đúng luật liễu (WILLOW_P, cùng hệ số ẩm / sát mép hồ x4 / trần 70%).
 //   Sát biển: cùng cơ chế "hạt + cụm" như đước (MANGROVE_SEED_K, MANGROVE_EXPAND_K, cụm bán kính 2) nhưng gấp COCONUT_COAST_MULT = 3 lần đước, và mọc trên ĐẤT sát bãi biển (không mọc trong nước nông).
 //   COCONUT_COAST_P: tỉ lệ theo 8 dải; dải 6-8 = đúng bảng đước (MANGROVE_P), dải 3-5 là phần kéo dài xuống thêm để dừa có mặt từ 3/8.
-const COCONUT_FROM = 2 / 8, COCONUT_COAST_MULT = 3;
+const COCONUT_FROM = 2 / 8, COCONUT_COAST_MULT = 5;   // [G38] 3 -> 5: dừa ven biển xuất hiện nhiều hơn
 const COCONUT_COAST_P = [0, 0, 0.10, 0.20, 0.30, 0.30, 0.55, 0.70];
 const MANGROVE_EXPAND_K = 0.25;   // [V67] đất đang mở rộng: xác suất đước chỉ còn 25%
 const MANGROVE_LAND_K = 0;      // [G33] đước KHÔNG còn mọc trên ô đất (cũ: 0.1)
@@ -716,11 +715,12 @@ const TOTAL_CELLS = GRID_W * GRID_H;
 // [V11] Dải tỉ lệ [min, max] cho từng loại (thay cho một mốc cố định)
 const RANGE = {
     [TYPE_WATER]: [0.01, 0.045],   // [V15] nước được vượt 3% tới tối đa 4.5%
-    [TYPE_TREE]: [0.14, 0.22],   // [V27] trần cây 27% -> 22% (min kéo theo 18% -> 14%)
+    [TYPE_TREE]: [0.14, 0.21],   // [G39] trần của BOT / thiên nhiên 21% (22% - 1% dành cho người chơi)   [V27] trần cây 27% -> 22% (min kéo theo 18% -> 14%)
     //   // [V17] rừng dày hơn nên dải tỉ lệ cây nâng lên (V16: 15-25%)
     [TYPE_HOUSE]: [0.02, 0.036],   // [V49] trần nhà 4% -> 3.6% [V27] 4.5% -> 4%
     [TYPE_FIELD]: [0.005, 0.012]   // [V43] trần 1.5% -> 1.2% [V15] ruộng 0.5-1.2%; dưới min chỉ khuyến khích (addFactor), không ép
 };
+const PLAYER_TREE_MAX = 0.22, PLAYER_TREE_FRAC = 0.01;   // [G39] trần tuyệt đối 22%; người chơi trồng tối đa PLAYER_TREE_FRAC (1%) đất bằng cây của mình, trong khoảng 21% -> 22%
 const FIELD_ABANDON_K = 0.2;    // [V24] hệ số công việc bỏ/phá ruộng (v23: 1) => còn 1/5
 const FIELD_SEED_GAP = 7;       // [V20] ruộng "hạt giống" mới phải cách mọi ruộng khác >= ngần này ô => ruộng chỉ lớn thêm quanh cụm cũ
 const FIELD_CLUMP_CAP = 28;     // [V20] số ô ruộng trong vùng 9x9 mà cụm thôi nới thêm (cụm ~30-40 ô, giống hồ có giới hạn)
@@ -855,6 +855,7 @@ const NATURE_AFTER = 2.5, NATURE_SPREAD = 0.12, NATURE_JITTER = 1.4; const COAST
 //   3. hồ tự nhiên nằm gần biển có xác suất được nối ra biển bằng eo (carveStraits)
 //  Ô seaKeep không bao giờ thành đất; vùng đất bị cắt khỏi đảo chính cũng thành biển.
 // ======================================================================
+const MAP_MIN_FRAC = 0.70, MAP_TRY_FRAC = 0.71, MAP_TRIES = 60;   // [G37] đất tối đa (MAX_LAND / TOTAL_CELLS, số hiện ở HUD) không bao giờ dưới 70%; lúc sinh bản đồ bốc lại tới khi >= 71% (chừa chỗ cho eo biển)
 const INLET_EXCL = 28;                     // không khoét vào vòng quanh đảo khởi đầu (ô)
 // [V15] BỜ BIỂN MƯỢT HƠN: ít vịnh, vịnh ngắn và rộng, eo biển hiếm và rộng, nhiễu hình dạng nhỏ lại, thêm lọc làm mượt
 const COAST_N1 = 1.25, COAST_N2 = 0.25;    // biên độ nhiễu lớn / nhỏ (v14: 1.9 / 0.6)
@@ -884,14 +885,14 @@ const CHOP_DENSE_AT = 21;         // tỉa rừng dày khi >= ngần này cây t
 //   Thời gian rảnh của bot dành cho việc khác, vd. chăm sóc ruộng (TEND): mỗi ô ruộng được chăm lại sau TEND_EVERY giây.
 //   Muốn rừng yên hơn nữa: TREE_WORK_K 0.2 -> 0.1; muốn bot chăm ruộng nhiều hơn: TEND_EVERY 360 -> 240.
 const TREE_WORK_K = 0.2, TREE_EDGE_MAX = 5;
-// [V103] SỐ CÂY TRONG LÀNG (viền bấm phím V): khoảng mục tiêu [lo, hi] theo số nhà H trong khung bao làng + VT_PAD ô, kèm điều kiện phụ cho lõi (xem engine.js).
+// [V103] SỐ CÂY TRONG LÀNG (viền bấm phím \): khoảng mục tiêu [lo, hi] theo số nhà H trong khung bao làng + VT_PAD ô, kèm điều kiện phụ cho lõi (xem engine.js).
 //   lo = max(1, floor(H / VT_LO_DIV)), hi = max(lo, ceil(H / VT_HI_DIV)) (hiện H/2 - H*0.75). Cây < lo => trồng tới giữa khoảng; cây > hi => chặt tới giữa khoảng.
 const VT_ON = true;
 const VT_MIN_HOUSES = 2;       // làng từ ngần này nhà mới áp dụng
 const VT_PAD = 0;              // khung đếm = khung bao các nhà của làng + ngần này ô   [G23] 1 -> 0: không đếm nhầm cây cạnh làng (trước đây 2)
-const VT_LO_DIV = 2, VT_HI_DIV = 4 / 3;   // lo = H / 3 (làm tròn xuống), hi = H / 2 (làm tròn lên)   [chỉnh] trước đây H/4 - H/3: làng còn ít cây
+const VT_LO_DIV = 3, VT_HI_DIV = 2;   // lo = H / 3 (làm tròn xuống), hi = H / 2 (làm tròn lên)   [G38] trước đây H/2 - H*0.75 (VT_LO_DIV = 2, VT_HI_DIV = 4/3)   [chỉnh] trước đây H/4 - H/3: làng còn ít cây
 const VT_CORE_MIN_HOUSES = 4;  // làng từ ngần này nhà thì lõi (khung 1/2 làng ở tâm) phải có cây
-const VT_CORE_DIV = 3;         // lõi tối thiểu max(1, floor(lo / 3)) cây
+const VT_CORE_DIV = 6;         // lõi tối thiểu max(1, floor(lo / 6)) cây   [G37] 3 -> 6: giảm một nửa số cây phải trồng ở vùng giữa làng (làng nhỏ vẫn giữ tối thiểu 1 cây)
 const VT_CHOP_PAR = 1, VT_CHOP_SKIP = 0.5;   // [G22] chặt cây theo luật làng: tối đa VT_CHOP_PAR người chặt cùng lúc mỗi làng; bot rảnh bỏ qua việc chặt với xác suất VT_CHOP_SKIP để còn làm ruộng / đào ao / xây nhà
 const VT_REFRESH = 8;          // giây: chu kỳ quét lại các làng
 const VT_REACH = 70;           // ô: chỉ người ở trong tầm này mới nhận việc của làng
@@ -1075,6 +1076,7 @@ const DOG_KEYS = ['cream', 'golden', 'brown', 'black'];
 // [V82] NGỒI CHƠI VỚI CHÓ / MÈO (người già + trẻ em): người đi tới ngồi cạnh con vật và vuốt ve ~14-30 giây (bé 12-22 giây).
 //   Con vật được "giữ lại" ngay khi có người nhận: đứng yên chờ, tới lúc vuốt thì chọn đứng / ngồi / ngủ (vẫy đuôi mạnh hơn, có tim bay lên), hết giờ mới đi tiếp.
 //   Chỉnh: ELDER_PET_P (xác suất người già chọn việc này mỗi lần rảnh), KID_PET_P, PET_OFF_* (khoảng cách ngồi cạnh con vật, px).
+const PET_REST = 60;   // [G40] 150 -> 60: sau khi được vuốt ve / dắt đi dạo xong, con chó (mèo) nghỉ PET_REST giây game (60 = 1/5 ngày game) không ai vuốt / dắt nữa
 const ELDER_PET_P = 0.22, KID_PET_P = 0.18, PET_OFF_ELDER = 17, PET_OFF_KID = 15, PET_FIND_R = 32;   // [G33] 16 -> 32 ô: hoạt động vuốt / dắt chó dễ xảy ra hơn
 // [G28] GIẢI TRÍ MỚI thay cho đứng chơi: người lớn vuốt chó / mèo + cho gà ăn; người già dắt chó đi dạo + cho gà ăn.
 //   Xác suất là "mỗi lần bot đang nghỉ chọn việc" (chỉ chạy khi có chó / mèo / gà trong tầm; không có thì rơi xuống luồng cũ).
@@ -1085,7 +1087,8 @@ const ELDER_PET_P = 0.22, KID_PET_P = 0.18, PET_OFF_ELDER = 17, PET_OFF_KID = 15
 const ADULT_AFTER_WORK_P = 0.12, ADULT_IDLE_LEISURE_P = 0.5, ELDER_WALK_P = 0.14, ELDER_FEED_P = 0.16;
 const FEED_MAX = 2, FEED_WINDOW = 300;   // [G36] mỗi đàn gà chỉ được cho ăn FEED_MAX lần trong FEED_WINDOW giây game (300 = 5 phút = 1 ngày game)
 const FEED_FIND_R = 32, FEED_OFF = 26, FEED_LURE_EVERY = 5, FEED_LURE_D = 24, FEED_DUR_MIN = 12, FEED_DUR_RANGE = 10;
-const WALK_LEGS = 3, WALK_R_MIN = 2.5, WALK_R_MAX = 4.5;
+const WALK_LEGS = 9,   // [G38] 3 -> 9 điểm dạo: dắt chó lâu gấp 3
+     WALK_R_MIN = 2.5, WALK_R_MAX = 4.5;
 const leisureStats = { pet: 0, feed: 0, walk: 0, chat: 0, warm: 0 };
 // [G34] HỘI THOẠI + LỬA TRẠI VÙNG LẠNH
 const CHAT_R = 15 * TILE_SIZE, CHAT_GAP = 20, CHAT_FIRST = [6, 12], CHAT_EVERY = [18, 34], POST_CHAT_P = 0.6, ADULT_CHAT_P = 0.22, ELDER_CHAT_P = 0.1;   // nghề (thợ săn / thủy thủ / đưa thư) hay đi hỏi thăm hơn hẳn người thường
@@ -1095,8 +1098,11 @@ const CAMP_SEATS = [[-17, 5, 1], [17, 5, -1], [-12, -9, 1], [12, -9, -1]];   // 
 const campfires = []; let campT = 0;
 // [G35] phản ứng sự kiện, xem vẽ, hẹn hò, tính cách
 const HEART_SCALE = 1.5, HEART_ALPHA = 0.8;   // [G36] cỡ (so với tim vuốt thú cưng) và độ đậm của tim trên đầu
-const DATE_PRIV_MIN = 6, DATE_PRIV_FAR = 16;   // [G36] hẹn hò kín đáo: chỗ ngồi phải cách mọi người >= DATE_PRIV_MIN ô; càng xa (tới DATE_PRIV_FAR ô) càng được ưu tiên
-const DATE_MAX = 2, DATE_P = 0.12, LOVE_KINDS = new Set(['stag', 'spotted', 'moose', 'rabbit', 'fox']);
+const DATE_TREE_CAP = 14, DATE_TREE_W = 3;   // [G37] bờ hồ: mỗi cây trong ô 7x7 quanh chỗ ngồi được -3 điểm (tối đa 14 cây = -42) => ưu tiên bờ hồ nhiều cây
+const DATE_PRIV_MIN = 6, DATE_PRIV_FAR = 16, DATE_PRIV_RELAX = 3;   // [G39] không có chỗ nào cách người khác >= DATE_PRIV_MIN ô thì hạ xuống DATE_PRIV_RELAX ô rồi tìm lại
+const DATE_PARTNER_R = 2.5, DATE_RETRY_NOPAIR = 12, DATE_RETRY_NOSPOT = 20;   // [G39] bán kính tìm bạn (x CHAT_R, trước 1,6); sau khi thất bại thì chờ bấy nhiêu giây mới thử lại (đỡ tốn CPU khi xác suất cao)   // [G36] hẹn hò kín đáo: chỗ ngồi phải cách mọi người >= DATE_PRIV_MIN ô; càng xa (tới DATE_PRIV_FAR ô) càng được ưu tiên
+const DATE_MAX = 4, DATE_P = 0.35,   // [G39] 2 -> 4 cặp cùng lúc; 0,12 -> 0,35 xác suất mỗi lần người lớn rảnh
+     LOVE_KINDS = new Set(['stag', 'spotted', 'moose', 'rabbit', 'fox']);
 const houseWatch = { n: 0, last: null, idle: 0, cd: 0, acc: 0 }, worldBubs = [], dates = [];
 let loveT = 4, rainShowT = -1, rainPrevTier = 0, rainShowCD = 0;   // [G28] đếm số lần bắt đầu mỗi hoạt động (kiểm tra / thống kê)
 // ======================================================================
@@ -2715,7 +2721,9 @@ function drawReed(g,v,seed){
     else{g.fillStyle=v.light;g.beginPath();g.ellipse(tx,-h-5,2.6,7,l*1.5,0,TAU);g.fill();g.stroke();}
   });
 }
+const MANGROVE_SIZE = 0.75;   // [G37] cỡ cây đước so với trước
 function drawMangrove(g,v,seed){
+  g.save();g.scale(MANGROVE_SIZE,MANGROVE_SIZE);   // [G37] thu nhỏ cây đước còn 75% (gốc ở (0,0) nên vẫn đứng đúng chỗ)
   const r=mulberry32(seed);
   [[-26,-19,.85,1.8],[-20,-22,.9,3.8],[-12,-20,.8,2.2],[-6,-18,.7,1.4],[5,-18,.7,1.4],[12,-21,.85,3.0],[19,-22,.9,4.2],[25,-19,.85,1.9]].forEach(([x,y0,k,w])=>{
     stroke2(g,v.outline,w+1.6,()=>{g.moveTo(x*.12,y0);g.quadraticCurveTo(x*k,y0-4,x,1);});
@@ -2726,6 +2734,7 @@ function drawMangrove(g,v,seed){
   leafBand(g,v,-2,-41,15,9,8,.1,v.mid,r()*6);
   leafBand(g,v,-3,-46,9,6,6,.1,v.light,r()*6);
   leafSpots(g,shade(v.light,.3),r,8,-3,-46,8,5,.8,.7);
+  g.restore();
 }
 function drawDune(g,v,seed){
   const r=mulberry32(seed);
@@ -2743,7 +2752,7 @@ TREE_VARIANTS.push(...V66_TREE_VARIANTS);   // chỉ số 41..51 (TREE_VARIANTS 
 //  Hệ toạ độ như các hàm cây khác: chân cây ở (0,0), đỉnh khoảng y = -56.
 //  Bên trong vẽ theo toạ độ ảnh gốc (1000x945) rồi co lại bằng COCO_S.
 // ======================================================================
-const COCO_S = 0.056;
+const COCO_S = 0.056, COCO_TRUNK_W = 0.9;   // [G38] COCO_TRUNK_W: bề ngang thân dừa so với trước (chiều cao giữ nguyên)
 
 // hình dạng một tàu lá con: dải thon, đầu tròn nhẹ
 function cocoLeafPath(g, bx, by, dx, dy, L, w, droop) {
@@ -2856,6 +2865,7 @@ function drawCoconut(g, v, seed) {
     const nn = v.nuts === undefined ? 2 : v.nuts;                  // số trái: 0, 1 hoặc 2
     const ext = nn < 2;                                            // ít hơn 2 trái: bỏ bẹ nâu, thân vẽ dài lên tận tán lá
     const E = (ext ? [[352, 492, 580], [400, 486, 588], [450, 484, 594], [505, 482, 602]] : [[505, 452, 600]]).concat([ [555, 482, 609], [625, 484, 617], [695, 478, 620], [765, 463, 618], [835, 435, 614], [905, 407, 613], [935, 408, 612]]);
+    E.forEach(e => { const m = (e[1] + e[2]) / 2, h = (e[2] - e[1]) / 2 * COCO_TRUNK_W; e[1] = m - h; e[2] = m + h; });   // [G38] thu hẹp bề ngang từng đoạn thân quanh đường tâm (thân vẫn nghiêng như cũ)
     const trunkPath = () => {                               // đường cong mượt qua các điểm đo
         const LC = E.map(e => [e[1], e[0]]), RC = E.map(e => [e[2], e[0]]).reverse();
         const last = LC[LC.length - 1], first = RC[0];
@@ -2917,7 +2927,7 @@ function drawCoconut(g, v, seed) {
 
 const COCONUT_VARIANT = { kind: 'coconut', light: '#63d04f', mid: '#3daf45', dark: '#28973c', outline: '#12502a', tip: '#b6ea5a',
     stem: '#b5db55', stemLight: '#e3f08a',
-    trunk: '#8a5a34', trunkLight: '#a87646', trunkDark: '#5a3820', trunkOutline: '#35200f',   // [G33] nâu đậm (cũ: #f2a63c / #fdcd55 / #c97a30 / #7a4515)
+    trunk: '#a8703f', trunkLight: '#c58f56', trunkDark: '#7c4d29', trunkOutline: '#3f2713',   // [G38] sáng hơn (G33: #8a5a34 / #a87646 / #5a3820 / #35200f); [G33] nâu đậm (cũ: #f2a63c / #fdcd55 / #c97a30 / #7a4515)
     husk: '#d88636', huskLight: '#ecab4c', huskDark: '#6b3a14', huskDark2: '#c98038',
     nut: '#8dc644', nutLight: '#cdf261', nutDark: '#5f9637', nutOutline: '#2f6a22' };   // 41 cây dừa
 
@@ -5922,32 +5932,35 @@ class Bot {
     goPath(pl, spd) { this.path = pl; this.pi = 0; this.checkT = 0.3; this.homeChk = 0.5; this.speed = spd; this.state = 'WALKING'; this.wandering = true; this.restNext = false; this.rest = null; }
     tryDateTask() {   // 1 nam + 1 nữ rảnh ra ngồi cạnh nhau ở bờ hồ (ưu tiên gần cây) / bờ biển; tối đa DATE_MAX cặp cùng lúc
         const L = this.look;
-        if (this.elder || this.job || this.dat || dates.length >= DATE_MAX || !L || !L.sex || this.pop < 1 || this.dying || this.assignedCell || rainWants(this) || this.nightWants()) return false;
-        let pt = null, bd = 1e12; const R2 = (CHAT_R * 1.6) * (CHAT_R * 1.6);
+        if (this.elder || this.job || this.dat || dates.length >= DATE_MAX || !L || !L.sex || this.pop < 1 || this.dying || this.assignedCell || rainWants(this) || this.nightWants() || simClock < (this.dateRetry || 0)) return false;
+        let pt = null, bd = 1e12; const R2 = (CHAT_R * DATE_PARTNER_R) * (CHAT_R * DATE_PARTNER_R);   // [G39]
         for (const o of bots) {
             if (o === this || o.elder || o.job || o.warm || !o.look || o.look.sex === L.sex || o.state !== 'IDLE' || !this.chatGuestOK(o)) continue;
             const d2 = (o.x - this.x) * (o.x - this.x) + (o.y - this.y) * (o.y - this.y); if (d2 < R2 && d2 < bd) { bd = d2; pt = o; }
         }
-        if (!pt) return false;
+        if (!pt) { this.dateRetry = simClock + DATE_RETRY_NOPAIR; return false; }
         const T = TILE_SIZE, mx = (this.x + pt.x) / 2, my = (this.y + pt.y) / 2; let best = null, bs = 1e12;
         const ppl = []; for (const o of bots) if (o !== this && o !== pt && !o.gone && !o.dying && (o.pop === undefined || o.pop >= 1)) ppl.push(o); for (const k of kids) if (!k.gone) ppl.push(k);   // [G36] những người khác (kể cả cặp khác đang hẹn hò)
         const far = (px, py) => { let m = 1e12; for (const o of ppl) { const dx = o.x - px, dy = o.y - py, q = dx * dx + dy * dy; if (q < m) m = q; } return Math.sqrt(m) / T; };
+        for (const minFr of [DATE_PRIV_MIN, DATE_PRIV_RELAX]) {   // [G39] lượt 1: kín đáo (>= DATE_PRIV_MIN ô); không có chỗ thì lượt 2 nới xuống DATE_PRIV_RELAX
         for (const list of [lakeShore, seaShore]) {
             const lake = list === lakeShore;
             for (const sp of list) {
                 const c = grid[sp.x][sp.y]; if (c.type !== TYPE_GRASS || c.isWorking || c.reserved || shoreTaken.has(sp.y * GRID_W + sp.x)) continue;
                 const d = Math.hypot((sp.x + 0.5) * T - mx, (sp.y + 0.5) * T - my) / T; if (d > 28) continue;
-                const fr = far((sp.x + 0.5) * T, (sp.y + 0.5) * T); if (fr < DATE_PRIV_MIN) continue;   // [G36] quá gần người khác: bỏ
+                const fr = far((sp.x + 0.5) * T, (sp.y + 0.5) * T); if (fr < minFr) continue;   // [G36] quá gần người khác: bỏ
                 let tree = 0;
                 if (lake) for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) { const a = sp.x + dx, b = sp.y + dy; if (a >= 0 && b >= 0 && a < GRID_W && b < GRID_H && grid[a][b].type === TYPE_TREE) tree++; }
-                const sc = d + (lake ? (tree > 0 ? -12 : 0) : 6) - Math.min(fr, DATE_PRIV_FAR) * 1.2 + Math.random() * 6;   // [G36] xa mọi người thì điểm tốt hơn   // bờ hồ có cây: ưu tiên nhất
+                const sc = d + (lake ? -Math.min(tree, DATE_TREE_CAP) * DATE_TREE_W : 6) - Math.min(fr, DATE_PRIV_FAR) * 1.2 + Math.random() * 6;   // [G36] xa mọi người thì điểm tốt hơn   // bờ hồ có cây: ưu tiên nhất
                 if (sc < bs) { bs = sc; best = sp; }
             }
         }
-        if (!best) return false;
+        if (best) break;
+        }
+        if (!best) { this.dateRetry = simClock + DATE_RETRY_NOSPOT; return false; }
         const px = (best.x + 0.5) * T, py = (best.y + 0.5) * T, horiz = best.fx !== best.x;
         const ax = horiz ? px : px - 7, ay = horiz ? py - 7 : py, bx = horiz ? px : px + 7, by = horiz ? py + 7 : py;
-        const pa = this.pathFor(ax, ay), pb = pt.pathFor(bx, by); if (!pa || !pb) return false;
+        const pa = this.pathFor(ax, ay), pb = pt.pathFor(bx, by); if (!pa || !pb) { this.dateRetry = simClock + DATE_RETRY_NOSPOT; return false; }
         const face = best.fx > best.x ? 1 : (best.fx < best.x ? -1 : (Math.random() < 0.5 ? 1 : -1));
         const D = { a: this, b: pt, s: best, t0: simClock, until: 0, hT: 0, dead: false };
         this.claimSpot(best); dates.push(D);
@@ -6740,7 +6753,7 @@ function petSpotOK(x, y) {
 function findPettable(x, y, rTiles, kind) {   // con chó / mèo rảnh gần nhất (chưa ai vuốt) trong rTiles ô   [G28] kind: chỉ lấy 'dog' / 'cat'
     let best = null, bd = rTiles * TILE_SIZE;
     for (const p of pets) {
-        if (p.die || p.pop < 1 || p.petter || p.walker || p.inside || (kind && p.kind !== kind)) continue;   // [V88] mèo đang trong nhà thì không vuốt được   [G28] chó đang được dắt cũng bận
+        if (p.die || p.pop < 1 || p.petter || p.walker || p.inside || (p.restUntil || 0) > simClock || (kind && p.kind !== kind)) continue;   // [G39] đang nghỉ giữa hai lần   // [V88] mèo đang trong nhà thì không vuốt được   [G28] chó đang được dắt cũng bận
         const d = Math.hypot(p.x - x, p.y - y) + Math.random() * 3 * TILE_SIZE;
         if (d < bd) { bd = d; best = p; }
     }
@@ -6813,13 +6826,14 @@ class Pet {
         this.rest(cat ? (r < 0.4 ? 'sit' : r < 0.8 ? 'sleep' : 'stand') : (r < 0.4 ? 'sit' : r < 0.75 ? 'stand' : 'sleep'), 99);
         if (this.mode !== 'sleep') { this.wagA *= 1.6; this.wagF = 8; }
     }
-    endPetted() { this.petter = null; this.petting = false; this.petWait = 0; this.napping = false; this.rest('stand', 1 + Math.random() * 2); }
+    endPetted() { if (this.petting) this.restUntil = simClock + PET_REST; this.petter = null;   // [G39] vuốt xong => bắt đầu thời gian nghỉ
+        this.petting = false; this.petWait = 0; this.napping = false; this.rest('stand', 1 + Math.random() * 2); }
     // [G28] Đang được người già dắt: người còn đang đi tới (dogPhase 'go') thì đứng chờ; khi đi dạo thì theo sát bên cạnh phía trước mặt người,
     //       thỉnh thoảng dừng đánh hơi, tụt xa thì chạy đuổi, người dừng thì đứng rồi ngồi. Hết dạo (người gọi endWalked) thì về nếp cũ (next() đưa chó về gần nhà).
     updateWalked(dt) {
         const h = this.walker;
         this.wT += dt;
-        if (this.die || !h || h.gone || h.fading || h.dogPet !== this || this.wT > 400) { this.endWalked(); return; }
+        if (this.die || !h || h.gone || h.fading || h.dogPet !== this || this.wT > 1200) { this.endWalked(); return; }   // [G38] trần thời gian 400 -> 1200 giây (theo 3 lần số điểm dạo)
         if (h.dogPhase !== 'walk') {
             if (this.mode !== 'stand') this.setMode('stand');
             this.state = 'rest'; this.napping = false;
@@ -6851,7 +6865,8 @@ class Pet {
         this.graze += (((m === 'sniff') ? 0.9 : 0) - this.graze) * Math.min(1, dt * 4);
     }
     endWalked() {
-        const h = this.walker; this.walker = null; this.idleT = 0; this.sniffT = 0; this.stuck = 0; this.napping = false;
+        const h = this.walker; if (h) this.restUntil = simClock + PET_REST; this.walker = null; this.idleT = 0;   // [G39] dắt xong => nghỉ
+        this.sniffT = 0; this.stuck = 0; this.napping = false;
         if (h && h.dogPet === this) h.dogPet = null;
         this.rest('stand', 1 + Math.random() * 2);
     }
@@ -10999,9 +11014,37 @@ function shoreCoconut(c, expanding, raw) {   // [G33] gieo hạt dừa sát bi�
     const f = (c.y + 0.5) / GRID_H;
     if (f < COCONUT_FROM || Math.random() >= bandLerp(COCONUT_COAST_P, f) * MANGROVE_SEED_K * COCONUT_COAST_MULT * (expanding ? MANGROVE_EXPAND_K : 1)) return false;
     if (!coconutOK(c.x, c.y)) return false;
+    if (!raw && Math.floor(RANGE[TYPE_TREE][1] * landTotal()) - counts[TYPE_TREE] < 2) return false;   // [G37] còn chỗ dưới trần cây cho ít nhất 2 cây dừa
     placeCoconut(c.x, c.y, raw);
-    coconutLine(c, raw);
+    if (coconutLine(c, raw) < 1) {   // [G37] không tìm được chỗ cho cây thứ hai: bỏ luôn cây hạt, không để dừa lẻ
+        if (raw) c.type = TYPE_GRASS;
+        else { setType(c, TYPE_GRASS); c.inGrow = false; const gi = growingTrees.indexOf(c); if (gi >= 0) growingTrees.splice(gi, 1); }
+        return false;
+    }
     return true;
+}
+// [G37] Dừa lẻ sát biển (cây kia bị chặt / bão đổ / chết): trồng thêm một cây bạn cách 2-3 ô; không có chỗ thì bỏ cây lẻ. Quét mỗi LONE_COCO_EVERY giây.
+const LONE_COCO_EVERY = 20;
+let loneCocoT = 0;
+function loneCoconutTick(dt) {
+    loneCocoT -= dt; if (loneCocoT > 0) return; loneCocoT = LONE_COCO_EVERY;
+    const R = COCONUT_STEP[1] + 1;
+    for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) {
+        const c = grid[x][y];
+        if (c.type !== TYPE_TREE || !isCoconut(c.treeVar) || c.isWorking || c.reserved || !nearOpenSea(x, y, TREE_SEA_GAP)) continue;
+        let mate = false;
+        for (let a = Math.max(0, x - R); a <= Math.min(GRID_W - 1, x + R) && !mate; a++) for (let b = Math.max(0, y - R); b <= Math.min(GRID_H - 1, y + R); b++) {
+            if ((a !== x || b !== y) && grid[a][b].type === TYPE_TREE && isCoconut(grid[a][b].treeVar)) { mate = true; break; }
+        }
+        if (mate) continue;
+        const cand = [];
+        for (let a = x - COCONUT_STEP[1]; a <= x + COCONUT_STEP[1]; a++) for (let b = y - COCONUT_STEP[1]; b <= y + COCONUT_STEP[1]; b++) {
+            if (a < 0 || b < 0 || a >= GRID_W || b >= GRID_H) continue;
+            if (Math.max(Math.abs(a - x), Math.abs(b - y)) >= COCONUT_STEP[0] && coconutOK(a, b)) cand.push([a, b]);
+        }
+        if (cand.length) { const q = cand[(Math.random() * cand.length) | 0]; placeCoconut(q[0], q[1], false); }
+        else { setType(c, TYPE_GRASS); }
+    }
 }
 function bambooSpots(gx, gy) {   // [V67] ô cỏ trống quanh (gx,gy) có thể thêm tre, gần trước xa sau
     const out = [];
@@ -11560,7 +11603,7 @@ function rebuildVillages() {
 }
 // id làng có nhà trong r ô quanh (cx,cy) (0 = không có); vaMulti = true nếu chạm ≥ 2 làng khác nhau
 // ======================================================================
-//  [V103] SỐ CÂY TRONG LÀNG (viền bấm phím V). H = số nhà của làng.
+//  [V103] SỐ CÂY TRONG LÀNG (viền bấm phím \). H = số nhà của làng.
 //  - Khung đếm = khung bao các nhà của làng + VT_PAD ô (VT_PAD = 0 [G23]; trước đây +1, và +2 ăn cả rìa rừng ngoài làng).
 //  - Khoảng mục tiêu: lo = max(1, floor(H / VT_LO_DIV)), hi = max(lo, ceil(H / VT_HI_DIV)), giữa = ceil((lo + hi) / 2).
 //    Cây (cả cây đang trồng) < lo => trồng thêm tới "giữa". Cây (trừ cây đang chặt) > hi => chặt bớt tới "giữa". Trong khoảng lo..hi: không làm gì.
@@ -11596,7 +11639,7 @@ function vtScan(v) {
     }
     return { T, planting, chopping, coreT, corePlanting, coreChopping, core, x0, x1, y0, y1 };
 }
-function vtCount(v) { return vtScan(v).T; }   // số cây trong khung (hiện trên nhãn phím V)
+function vtCount(v) { return vtScan(v).T; }   // số cây trong khung (hiện trên nhãn phím \)
 function vtDecide(v) {   // cập nhật trạng thái của làng; trả về { mode: 'plant' | 'chop', goal, core } nếu đang cần việc, null nếu không
     const s = vtScan(v), H = v.size;
     v.vtT = s.T;
@@ -12271,7 +12314,7 @@ let coastRealT = 0;
 let landPath = null, seaPath = null, expansions = 0, coastLoops = 0, coastPts = 0;
 const seaCanvas = document.createElement('canvas');
 seaCanvas.width = GRID_W; seaCanvas.height = GRID_H;
-window.addEventListener('keydown', (e) => { if (e.key === 'e' || e.key === 'E') forceExpand = true; });
+// [G38] đã tắt phím E (mở rộng đảo ngay); forceExpand vẫn còn để các chỗ khác dùng
 function landTotal() { return Math.max(1, TOTAL_CELLS - counts[TYPE_SEA]); }
 function maxLakes() { return Math.max(3, Math.min(MAX_LAKES, Math.round(landTotal() / 470))); }
 // Dân số tăng theo diện tích nhưng dưới tuyến tính (đảo nhỏ vẫn đủ người làm): 7 bot lúc đầu -> 40 khi kín bản đồ
@@ -12485,7 +12528,7 @@ function buildSeaKeep() {
 let straitCount = 0;
 function carveStraits() {
     const al = new Uint8Array(N_CELLS); for (let i = 0; i < N_CELLS; i++) al[i] = seaKeep[i] ? 0 : 1;
-    const cx = GRID_W / 2, cy = GRID_H / 2, D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const cx = GRID_W / 2, cy = GRID_H / 2, D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], marked = [];
     lakePlans.forEach((p, pi) => {
         if (p.done) return;
         let bi = -1, bd = 999;
@@ -12510,9 +12553,14 @@ function carveStraits() {
         }
         for (const i of path) carveDisc(al, (i % GRID_W) + 0.5, ((i / GRID_W) | 0) + 0.5, STRAIT_R);   // [V15] eo rộng hơn, không còn đường mảnh
         for (const i of p.cells) al[i] = 0;
-        p.done = true; p.strait = true; straitCount++;
+        p.done = true; p.strait = true; straitCount++; marked.push(p);
     });
+    const sk0 = seaKeep.slice(), kd0 = keepDist.slice(), ml0 = MAX_LAND, sc0 = straitCount;   // [G37]
     finalizeKeep(smoothM(al, 1));   // [V15] làm mượt chỗ eo vừa khoét
+    if (marked.length && MAX_LAND < TOTAL_CELLS * MAP_MIN_FRAC) {   // [G37] khoét eo làm đất tối đa dưới 70%: bỏ hết eo, giữ bản đồ cũ
+        seaKeep.set(sk0); keepDist.set(kd0); MAX_LAND = ml0; straitCount = sc0;
+        for (const p of marked) { p.done = false; p.strait = false; }
+    }
     for (const p of lakePlans) {                     // dọn kế hoạch hồ bị biển nuốt / bị cắt khỏi đất liền / sát biển mới
         let bad = p.strait;
         if (!bad) for (const i of p.cells) if (seaKeep[i] || keepDist[i] < 3) { bad = true; break; }
@@ -12538,6 +12586,14 @@ function generateIsland() {
 function initLand() {
     landSeed = 100 + Math.floor(Math.random() * 9000);
     buildSeaKeep();        // [V14] hình dạng lục địa cong + vịnh/eo biển giữ vĩnh viễn
+    {   // [G37] bản đồ quá nhiều biển (< MAP_TRY_FRAC): bốc lại hình dạng, giữ bản tốt nhất nếu hết lượt
+        let bSeed = landSeed, bMax = MAX_LAND, bKeep = seaKeep.slice(), bDist = keepDist.slice();
+        for (let t = 0; t < MAP_TRIES && MAX_LAND < TOTAL_CELLS * MAP_TRY_FRAC; t++) {
+            landSeed = 100 + Math.floor(Math.random() * 9000); buildSeaKeep();
+            if (MAX_LAND > bMax) { bSeed = landSeed; bMax = MAX_LAND; bKeep = seaKeep.slice(); bDist = keepDist.slice(); }
+        }
+        if (MAX_LAND < bMax) { landSeed = bSeed; MAX_LAND = bMax; seaKeep.set(bKeep); keepDist.set(bDist); }
+    }
     buildPotential();
     for (let j = 0; j < CF_H; j++) for (let i = 0; i < CF_W; i++)
         coastNoise[j * CF_W + i] = (fbm(i * 0.22, j * 0.22, landSeed + 501, 3) - 0.5) * 0.45;
@@ -13513,7 +13569,7 @@ const START_KIDS = 2;   // [FIRE2] số trẻ em lúc bắt đầu game
 let kidBirthT = KID_BIRTH_EVERY;
 // [V48] Phím V: bật/tắt lớp hiển thị làng (mỗi làng một màu, khung bao + nhãn "Làng N · số nhà/hạn mức")
 let showVillages = false;
-window.addEventListener('keydown', (e) => { if (e.key === 'v' || e.key === 'V') showVillages = !showVillages; });
+window.addEventListener('keydown', (e) => { if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; const tg = e.target, tag = tg && tg.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tg && tg.isContentEditable)) return; if (e.key === '\\' || e.code === 'Backslash') showVillages = !showVillages; });   // [G38] phím V -> \
 function houseList() {
     const out = [];
     for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) if (grid[x][y].type === TYPE_HOUSE) out.push(grid[x][y]);
@@ -14443,6 +14499,7 @@ function scanStrandedMovers(el) {
 // [V67] Đước chỉ sống sát biển: đất lấn ra làm nó lọt vào đất liền (> TREE_COAST_SOFT ô cách biển) quá 1 ngày => bị phá
 let mangT = 0;
 function updateInlandMangrove(dt) {
+    loneCoconutTick(dt);   // [G37]
     mangT -= dt; if (mangT > 0) return; mangT = 3;
     for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) {
         const c = grid[x][y];
@@ -14790,7 +14847,22 @@ function typeCanGrow(t) {
     } catch (e) { }
     return true;
 }
+// [G39] cây do người chơi trồng (c.playerMade) đếm lại mỗi giây
+let ptN = 0, ptT = -1e9;
+function playerTreeN() {
+    const now = performance.now(); if (now - ptT < 1000) return ptN; ptT = now;
+    let n = 0; for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) { const c = grid[x][y]; if (c.type === TYPE_TREE && c.playerMade) n++; }
+    return (ptN = n);
+}
+const playerTreeCap = () => Math.max(1, Math.floor(PLAYER_TREE_FRAC * landTotal()));
+const cwpHi = (t) => t === TYPE_TREE ? PLAYER_TREE_MAX : RANGE[t][1];   // trần mà người chơi nhìn thấy (cây: 22%, bot chỉ tới 21%)
+function cwpTreeFull(z) {   // người chơi hết chỗ trồng cây: chạm trần 22% / vùng (z) đã đủ / dùng hết phần 1% của mình
+    if (counts[TYPE_TREE] / landTotal() >= PLAYER_TREE_MAX) return true;
+    if (z !== undefined && zoneRatio(TYPE_TREE, z) >= PLAYER_TREE_MAX) return true;
+    return playerTreeN() >= playerTreeCap();
+}
 function cwpBlocked(type, z) {   // loại này còn đang chạm trần không (đúng điều kiện của addFactor = 0)
+    if (type === TYPE_TREE) return cwpTreeFull(z);   // [G39] cây: dùng trần của người chơi
     if (addFactor(type) <= 0) return true;
     return (type === TYPE_TREE || type === TYPE_HOUSE) && addFactor(type, z) <= 0;
 }
@@ -14872,8 +14944,8 @@ function cwpCheckRaw(act, gx, gy) {
         if (nT8 > TREE_EDGE_MAX) return no('Chỗ này đã quá dày cây');
         if (planNear(gx, gy, LAKE_TREE_GAP, 0)) return no('Sát vùng hồ tự nhiên sắp hiện');
         if (inSnowBiome(gy) && snowFull()) return no('Vùng tuyết đã đủ cây');
-        const whyT = cur(TYPE_TREE) >= RANGE[TYPE_TREE][1] ? 'Vượt ngân sách cây' : (addFactor(TYPE_TREE, z) <= 0 ? 'Vùng đất này đã đủ cây' : '');
-        if (whyT) return CWP.slot[TYPE_TREE].used ? no(whyT + ' (đã dùng suất đặc cách ★)') : starYes(TYPE_TREE, z);   // [P5] chạm trần: được đặc cách 1 cây
+        const whyT = cur(TYPE_TREE) >= PLAYER_TREE_MAX ? 'Vượt ngân sách cây' : (zoneRatio(TYPE_TREE, z) >= PLAYER_TREE_MAX ? 'Vùng đất này đã đủ cây' : (playerTreeN() >= playerTreeCap() ? 'Phần cây dành cho bạn đã đầy' : ''));   // [G39] bot 21%, người chơi thêm 1% (22%)
+        if (whyT) return CWP.slot[TYPE_TREE].used ? no(whyT) : starYes(TYPE_TREE, z);   // [P5] chạm trần: được đặc cách 1 cây
         return yes();
     }
     if (act === 'chop') {
@@ -14895,7 +14967,7 @@ function cwpCheckRaw(act, gx, gy) {
         if (!(nH > 0 || nT <= 6)) return no('Nhiều cây quanh, chưa có nhà kề');
         const s = cwpBuildW(gx, gy, 1, nH, nT, nH4);
         if (s.w <= 0) return no(s.why);
-        if (addFactor(TYPE_HOUSE, z) <= 0) return CWP.slot[TYPE_HOUSE].used ? no('Vượt ngân sách nhà (đã dùng suất đặc cách ★)') : starYes(TYPE_HOUSE, z);   // [P6] chạm trần: được đặc cách 1 nhà
+        if (addFactor(TYPE_HOUSE, z) <= 0) return CWP.slot[TYPE_HOUSE].used ? no('Vượt ngân sách nhà') : starYes(TYPE_HOUSE, z);   // [P6] chạm trần: được đặc cách 1 nhà
         return yes();
     }
     if (act === 'pond') {
@@ -14913,7 +14985,7 @@ function cwpCheckRaw(act, gx, gy) {
         }
         if (neighborLakes(gx, gy).n > 0 && canExtendLakeBase(c)) return no('Sát hồ có sẵn (dùng công cụ Đào mở rộng)');
         if (!(lakeSize.length - 1 < maxLakes())) return no('Đã đủ số hồ tối đa');
-        if (addFactor(TYPE_WATER) <= 0) return CWP.slot[TYPE_WATER].used ? no('Vượt ngân sách nước (đã dùng suất đặc cách ★)') : starYes(TYPE_WATER, 0);   // [P7] chạm trần: được đặc cách 1 ao
+        if (addFactor(TYPE_WATER) <= 0) return CWP.slot[TYPE_WATER].used ? no('Vượt ngân sách nước') : starYes(TYPE_WATER, 0);   // [P7] chạm trần: được đặc cách 1 ao
         return yes();
     }
     if (act === 'dig') {   // [G11c] đào MỞ RỘNG hồ có sẵn: 1 ô cỏ sát hồ, cùng điều kiện bot nới hồ (canExtendLake)
@@ -14929,7 +15001,7 @@ function cwpCheckRaw(act, gx, gy) {
         if (hasAround(gx, gy, LAKE_TREE_GAP, TYPE_TREE)) return no('Sát cây (nước sẽ nuốt cây)');
         if (countAround(gx, gy, 1, TYPE_HOUSE) > 0) return no('Quá gần nhà');
         if (!canExtendLake(c, true)) return no('Không đào được ở ô này');   // [G11d]
-        if (addFactor(TYPE_WATER) <= 0) return CWP.slot[TYPE_WATER].used ? no('Vượt ngân sách nước (đã dùng suất đặc cách ★)') : { ok: true, reason: 'Đào mở rộng hồ ★ dùng suất đặc cách', cells, star: true, slotType: TYPE_WATER, z: 0 };
+        if (addFactor(TYPE_WATER) <= 0) return CWP.slot[TYPE_WATER].used ? no('Vượt ngân sách nước') : { ok: true, reason: 'Đào mở rộng hồ ★ dùng suất đặc cách', cells, star: true, slotType: TYPE_WATER, z: 0 };
         return { ok: true, reason: 'Đào mở rộng hồ', cells };
     }
     if (act === 'farm') {
@@ -14956,7 +15028,7 @@ function cwpCheckRaw(act, gx, gy) {
             if (!(nT3 <= (fieldU > 0 ? 3 : 1))) return no('Quanh đây quá nhiều cây');
             if (countAround(gx, gy, FIELD_SEED_GAP, TYPE_FIELD) !== 0) return no('Gần ruộng khác: khai ngay cạnh, hoặc cách ruộng sẵn có đúng 1 ô');
         }
-        if (!(fFx > 0 || (fillGap && fieldCur < fieldHi * 1.05))) return CWP.slot[TYPE_FIELD].used ? no('Vượt ngân sách ruộng (đã dùng suất đặc cách ★)') : starYes(TYPE_FIELD, 0);   // [P8] chạm trần: được đặc cách 1 ô ruộng
+        if (!(fFx > 0 || (fillGap && fieldCur < fieldHi * 1.05))) return CWP.slot[TYPE_FIELD].used ? no('Vượt ngân sách ruộng') : starYes(TYPE_FIELD, 0);   // [P8] chạm trần: được đặc cách 1 ô ruộng
         return yes();
     }
     if (act === 'fix') {   // [P10.1] sửa chữa: đúng đối tượng + điều kiện của Bot.tryFixTask / tryFixTreeTask (không tốn ngân sách)
@@ -15220,7 +15292,7 @@ function cwpToolsInit() {
     cwpTipEl = document.createElement('div'); cwpTipEl.id = 'cwp-tip'; document.body.appendChild(cwpTipEl);
     cwpBudEl = document.createElement('div'); cwpBudEl.id = 'cwp-bud';
     const rows = [['🌳 Cây', TYPE_TREE], ['🏠 Nhà', TYPE_HOUSE], ['💧 Ao', TYPE_WATER], ['🌾 Ruộng', TYPE_FIELD]];
-    cwpBudEl.innerHTML = rows.map(r => { const lo = RANGE[r[1]][0], hi = RANGE[r[1]][1], sc = hi * 1.3;
+    cwpBudEl.innerHTML = rows.map(r => { const lo = RANGE[r[1]][0], hi = cwpHi(r[1]), sc = hi * 1.3;
         return '<div class="r"><span class="l">' + r[0] + '</span><span class="b"><span class="band" style="left:' + (100 * lo / sc) + '%;width:' + (100 * (hi - lo) / sc) + '%"></span><span class="m" data-t="' + r[1] + '"></span></span><span class="v" data-v="' + r[1] + '"></span><span class="st" data-st="' + r[1] + '" title="Suất đặc cách: ★ còn, ☆ đã dùng">★</span></div>'; }).join('');
     document.body.appendChild(cwpBudEl);
     window.addEventListener('keydown', (e) => {
@@ -15238,7 +15310,7 @@ function cwpToolsInit() {
 function cwpToolAvail(id) {
     try {
         const L = landTotal(), cur = (t) => counts[t] / L, free = (t) => !(CWP.slot[t] && CWP.slot[t].used);
-        if (id === 'plant') return (cur(TYPE_TREE) < RANGE[TYPE_TREE][1] && (addFactor(TYPE_TREE, 0) > 0 || addFactor(TYPE_TREE, 1) > 0)) || free(TYPE_TREE);
+        if (id === 'plant') return !cwpTreeFull(0) || !cwpTreeFull(1) || free(TYPE_TREE);   // [G39]
         if (id === 'build') return earlyHouseOK() && ((addFactor(TYPE_HOUSE, 0) > 0 || addFactor(TYPE_HOUSE, 1) > 0) || free(TYPE_HOUSE));
         if (id === 'pond') return addFactor(TYPE_WATER) > 0 || free(TYPE_WATER);
         if (id === 'farm') return addFactor(TYPE_FIELD) > 0 || cur(TYPE_FIELD) < RANGE[TYPE_FIELD][1] * 1.05 || free(TYPE_FIELD);
@@ -15256,7 +15328,7 @@ function cwpUiTick(time) {   // đồng hồ ngân sách: cập nhật 2 lần /
     if (time - cwpBudT < 0.5) return; cwpBudT = time;
     const L = landTotal();
     for (const m of cwpBudEl.querySelectorAll('.m')) {
-        const t = +m.dataset.t, cur = counts[t] / L, lo = RANGE[t][0], hi = RANGE[t][1];
+        const t = +m.dataset.t, cur = counts[t] / L, lo = RANGE[t][0], hi = cwpHi(t);
         m.style.left = Math.min(100, 100 * cur / (hi * 1.3)) + '%';
         m.style.background = cur >= hi ? '#d9534f' : (cur < lo ? '#d9a13a' : '#2c3e50');
         cwpBudEl.querySelector('[data-v="' + t + '"]').textContent = (100 * cur).toFixed(1) + '%';
@@ -15277,8 +15349,8 @@ function cwpBadgeSync(L) {
     const MAP = { plant: [TYPE_TREE, 'Cây'], build: [TYPE_HOUSE, 'Nhà'], pond: [TYPE_WATER, 'Ao / hồ'], farm: [TYPE_FIELD, 'Ruộng'] };
     for (const id in MAP) {
         const b = cwpBarEl.querySelector('[data-t="' + id + '"]'); if (!b) continue;
-        const t = MAP[id][0], cur = counts[t] / L, lo = RANGE[t][0], hi = RANGE[t][1];
-        const need = cur < lo && typeCanGrow(t) && cwpToolAvail(id), full = cur >= hi, star = CWP.slot[t] && !CWP.slot[t].used;
+        const t = MAP[id][0], cur = counts[t] / L, lo = RANGE[t][0], hi = cwpHi(t);
+        const need = cur < lo && typeCanGrow(t) && cwpToolAvail(id), full = t === TYPE_TREE ? cwpTreeFull() : cur >= hi, star = CWP.slot[t] && !CWP.slot[t].used;
         b.classList.toggle('need', need); b.classList.toggle('full', full);
         const bd = b.querySelector('.bd'); if (bd) bd.textContent = need ? '+' : (full && star ? '★' : '');
         const tool = CWP_TOOLS.find(x => x.id === id);
@@ -16470,26 +16542,28 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
     if (confirm('Bắt đầu ván mới?\nBản lưu hiện tại sẽ bị xoá và hòn đảo được tạo lại từ đầu.')) cwNewGame();
 });
 // ======================================================================
-//  [G32] (1) PHÍM TẮT ẨN TỐC ĐỘ: F11 = x4, F12 = x40 (bấm lại = về tốc độ đang chọn trong ⚙️). Không ghi trong hướng dẫn / phím tắt.
+//  [G32] (1) PHÍM TẮT ẨN TỐC ĐỘ: [ = x4, ] = x40 (G38: trước đây F11 / F12) (bấm lại = về tốc độ đang chọn trong ⚙️). Không ghi trong hướng dẫn / phím tắt.
 //        (2) CHẾ ĐỘ HƯỚNG DẪN NGƯỜI MỚI: từng bước, có 4 nhiệm vụ (xây nhà · trồng cây · mở rộng ao · khai ruộng).
 //            Chỉ ĐỌC trạng thái game (ORDERS, CWP, camera, cwpCheck) và gọi sẵn cwpSetTool / ordAssist; không sửa luật game.
 //            Tự chạy ở ván mới đầu tiên; xem lại bất cứ lúc nào ở ⚙️ → 📖 Hướng dẫn.
 // ======================================================================
 (function cwG32() {
     // ---------- (1) Phím tắt ẩn tốc độ ----------
-    let spBase = 2;   // tốc độ người chơi chọn trong ⚙️ (x1 / x2): F11 / F12 bấm lần nữa sẽ quay về mức này
+    let spBase = 2;   // tốc độ người chơi chọn trong ⚙️ (x1 / x2): [ / ] bấm lần nữa sẽ quay về mức này
     const spSegEl = document.getElementById('sp-seg');
     function spSyncUI() {   // công tắc ⚙️ chỉ có Bật (x2) / Tắt (x1): đang chạy nhanh hơn x1 thì hiện là Bật
         if (!spSegEl) return;
         spSegEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.dataset.sp === '1') === (gameSpeed > 1)));
     }
     if (spSegEl) spSegEl.addEventListener('click', () => { spBase = gameSpeed > 1 ? 2 : 1; });   // listener cũ (setSP) đã chạy trước
-    window.addEventListener('keydown', (e) => {
-        if (e.key !== 'F11' && e.key !== 'F12') return;
+    window.addEventListener('keydown', (e) => {   // [G38] đổi F11 -> [  và  F12 -> ]  (F11 / F12 trả lại cho trình duyệt)
+        const isL = e.key === '[' || e.code === 'BracketLeft', isR = e.key === ']' || e.code === 'BracketRight';
+        if (!isL && !isR) return;
         if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-        e.preventDefault(); e.stopPropagation();   // chặn toàn màn hình (F11) / DevTools (F12) của trình duyệt khi đang chơi
+        const tg = e.target, tag = tg && tg.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (tg && tg.isContentEditable)) return;   // đang gõ chữ: không đổi tốc độ
+        e.preventDefault(); e.stopPropagation();
         if (e.repeat || window.__cwLoading !== false) return;
-        const tgt = e.key === 'F11' ? 4 : 40;
+        const tgt = isL ? 4 : 40;
         gameSpeed = (gameSpeed === tgt) ? spBase : tgt;
         spSyncUI();
     }, true);
