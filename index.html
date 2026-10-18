@@ -13887,10 +13887,10 @@ let stormsSurvived = 0;   // số bão / mưa lớn ngập đã đi qua (tăng t
 const CW_STAR_DOWN_CHECKS = 5, CW_STAR_EVERY = 60, CW_STAR_STEP_MS = 250, CW_STAR_MIN_GAP_MS = 3000;
 // [G61] Sao tăng dần theo PHÁT TRIỂN THẬT của đảo (không chờ thời gian): bỏ "điểm miễn phí" ngay từ đầu ván ở các trụ (xem cwPillar*) và tính điểm từ mức nền tự đo (cwStar.base).
 const CW_STAR_TABLE = [   // [half, điểm tối thiểu, điều kiện huy hiệu]; b = { T, Tx, O, K }
-    // [G61b] Chỉnh theo trace ván thật: đầu ván nhích đều hơn (0.5★ ~phút 3, 1★ ~6, 1.5★ ~10, 2★ ~17), giữa ván giãn ra vì trụ Đời sống / Sinh thái đã gần trần (17/20, 16/20) nên điểm tăng vọt ở phút 22-27; từ 3★ trở đi chỉ tăng nhờ Đất / Cộng đồng / Bền bỉ (chậm hơn)
-    [1, 6, b => true], [2, 12, b => true], [3, 18, b => true], [4, 30, b => true], [5, 42, b => true], [6, 60, b => true],
-    [7, 68, b => b.T >= 1], [8, 75, b => b.T >= 2], [9, 82, b => b.T >= 4 && b.O >= 3],
-    [10, 90, b => b.T >= 5 && b.Tx >= 3 && b.O >= 4 && b.K >= 2]
+    // [G61e] Chỉnh theo giả lập headless x9 (có bão), 78 phút game. Sau khi nới phạt hư hỏng, điểm chạm trần (~98) từ phút 70 nên 4★ trở lên chủ yếu bị chặn bởi huy hiệu. Mục tiêu ván tự chơi: 0.5★ ~3 · 1★ ~8 · 1.5★ ~13 · 2★ ~17 · 2.5★ ~27 · 3★ ~43 · 3.5★ ~54 · 4★ ~58 phút.
+    [1, 6, b => true], [2, 16, b => true], [3, 21, b => true], [4, 32, b => true], [5, 52, b => true], [6, 72, b => true],
+    [7, 83, b => b.T >= 1], [8, 90, b => b.T >= 2], [9, 93, b => b.T >= 4 && b.O >= 3],
+    [10, 95, b => b.T >= 5 && b.Tx >= 3 && b.O >= 4 && b.K >= 2]
 ];
 // [G61] Sau khi bỏ điểm miễn phí ở các trụ, nền đảo hoang chỉ còn ~15. Nền được TỰ ĐO ở lần chấm đầu của ván mới (cwStar.base, lưu theo bản save); bản save cũ chưa có thì dùng CW_STAR_BASE.
 const CW_STAR_BASE = 15;
@@ -13953,7 +13953,7 @@ function cwPillarLife(R) {
     const L = landTotal();
     const field = 5 * cwInBand(counts[TYPE_FIELD] / L, TYPE_FIELD);
     // [v1.3] Ít hư hỏng: chỉ tính thiệt hại thật (fixList + ruộng trắng). Nhà HẾT TUỔI (agedHouses) là tự nhiên nên không trừ.
-    const bad = fixList.size + whiteList.size, base = Math.max(5, 0.15 * (counts[TYPE_HOUSE] + counts[TYPE_FIELD]));
+    const bad = fixList.size + whiteList.size, base = Math.max(8, 0.4 * (counts[TYPE_HOUSE] + counts[TYPE_FIELD]));   // [G61d] 0.15 -> 0.4 (tối thiểu 5 -> 8): ván giả lập, 1 cơn bão làm 19 nhà/ruộng hỏng => "ít hư hỏng" về 0 trong 9 phút, Đời sống rớt 5 điểm, sao đứng im 11 phút
     const few = 5 * (1 - cwClamp01(bad / base)) * cwClamp01(counts[TYPE_HOUSE] / 25);   // [G61] "ít hư hỏng" chỉ có giá trị khi đã có làng: nhân theo số nhà / 25 (đầu ván không còn 5 điểm miễn phí)
     // Công trình đặc biệt: 1.5đ mỗi loại. [v1.3] đã từng có là giữ điểm (nhà tự hết tuổi rồi được xây lại), nên chốt vào cwStar.special
     const found = {};
@@ -13962,10 +13962,10 @@ function cwPillarLife(R) {
     const spKinds = ['barn', 'mill', 'church', 'clock'], sp = spKinds.filter(k => found[k] || cwStar.special[k]).length;
     // Sinh hoạt: số sự kiện leisureStats tăng thêm trong ~5 phút game gần nhất; >= 8 sự kiện = 4đ
     let total = 0; for (const k of CW_LEISURE_KEYS) total += leisureStats[k] || 0;
-    const H = cwStar.leisureHist.filter(h => h[0] >= simClock - 305);
+    const H = cwStar.leisureHist.filter(h => h[0] >= simClock - 605);   // [G61d] cửa sổ 5 -> 10 phút cho điểm sinh hoạt bớt dao động
     const events = total - (H.length ? H[0][1] : 0);
     if (!R.dry) { H.push([simClock, total]); cwStar.leisureHist = H; }
-    const leisure = 4 * cwClamp01(events / 8);
+    const leisure = 4 * cwClamp01(events / 15);   // [G61d] 8 sự kiện / 5 phút -> 15 sự kiện / 10 phút
     R.raw.fixList = fixList.size; R.raw.whiteList = whiteList.size; R.raw.agedHouses = agedHouses.size + ' (không tính điểm)'; R.raw.special = sp; R.raw.leisure5min = events;
     return field + few + 1.5 * sp + leisure;
 }
@@ -14011,7 +14011,7 @@ function cwPillarResilience(R) {
     R.raw.storms = stormsSurvived; R.raw.oldDamage = old; R.raw.minutes = +(simClock / 60).toFixed(1);
     // [v1.2] trọng số 10 / 6 / 4: người tắt biến cố (stormsSurvived đứng yên) chỉ mất tối đa 6đ ≈ 0.5★, trụ vẫn đạt 14/20
     // [G61] Thời gian 10 -> 8; "sửa kịp" 4 -> 6 nhưng nhân theo thời gian (2 mùa mới đủ), đầu ván không còn 4 điểm miễn phí
-    return 8 * cwClamp01(simClock / (3 * SEASON_CYCLE)) + 6 * cwClamp01(stormsSurvived / 2) + 6 * (1 - cwClamp01(old / 5)) * cwClamp01(simClock / (2 * SEASON_CYCLE));
+    return 8 * cwClamp01(simClock / (3 * SEASON_CYCLE)) + 6 * cwClamp01(stormsSurvived / 2) + 6 * (1 - cwClamp01(old / Math.max(8, 0.15 * (counts[TYPE_HOUSE] + counts[TYPE_FIELD])))) * cwClamp01(simClock / (2 * SEASON_CYCLE));   // [G61d] hư hỏng lâu: chia cho max(8, 15% nhà+ruộng) thay vì 5 (ván giả lập: 34 chỗ hỏng làm Bền bỉ rớt 5,6 điểm)
 }
 // ---------- [G57] 7 HUY HIỆU TAY NGHỀ T1..T7 (mỗi huy hiệu 0 = chưa, 1 = đạt, 2 = xuất sắc) ----------
 // Mọi ngưỡng gom về CW_T_CFG để chỉnh ở B6 sau khi đo bằng cwStarDebug(true).live.raw.T1..T7. [min đạt, min xuất sắc]
@@ -14178,7 +14178,7 @@ function cwStarCommit(R) {
     score = cwStarAdj(score);
     const nh = cwStarFromScore(score, cwStarBadgeCounts(R), R.p);
     cwStar.score = Math.round(score * 10) / 10; cwStar.pillars = R.p.map(p => Math.round(p * 10) / 10);
-    { const T = cwStar.trace || (cwStar.trace = []); T.push([+(simClock / 60).toFixed(1), cwStar.score, cwStar.rawSum].concat(cwStar.pillars)); if (T.length > 150) T.shift(); }   // [G61] vết điểm theo phút: [phút, điểm, tổng 5 trụ, 5 trụ...] để chỉnh ngưỡng (xem cwStarDebug().trace)
+    { const T = cwStar.trace || (cwStar.trace = []); T.push([+(simClock / 60).toFixed(1), cwStar.score, cwStar.rawSum].concat(cwStar.pillars, [R.raw.fixList | 0, R.raw.whiteList | 0])); if (T.length > 150) T.shift(); }   // [G61] vết điểm theo phút: [phút, điểm, tổng 5 trụ, 5 trụ..., số nhà/ruộng chờ sửa, số ruộng trắng] để chỉnh ngưỡng (xem cwStarDebug().trace)
     cwStar.badges = Object.assign({}, R.t, R.o, R.k);
     for (const id in cwStar.badges) if (cwStar.badges[id]) cwStar.revealed[id] = true;
     cwStar.nextAt = Math.max(cwStar.nextAt, simClock - CW_STAR_EVERY) + CW_STAR_EVERY;
