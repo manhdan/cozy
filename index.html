@@ -20547,6 +20547,7 @@ cwBoot();
         if (!cwHeartsCan(K.cost)) { cwDeny('noheart', cwNoHeartMsg(K.cost)); return; }
         cwHeartsSpend(K.cost); try { cwHeartsTick().used += K.cost; } catch (er) { }   // tim tiêu ngay (không qua lệnh): ghi 'used' để sổ cái tim (cwHeartAudit) vẫn khớp
         e.decor.push({ k: CWP.decorKind, gx, gy, born: simClock, seed: Math.random() });
+        if (CWP.decorKind === 'garden') gardenAdopt(e.decor[e.decor.length - 1]);   // mẫu hoa + độ thưa: ngẫu nhiên, hoặc theo khóm kề bên
         for (const p of r.cells) grid[p[0]][p[1]].reserved = true;
         try { if (window.cwWorkSfx) window.cwWorkSfx('done'); } catch (er) { }
         cwpToast(K.ico + ' Đã đặt ' + K.name.toLowerCase(), 1500);
@@ -20608,55 +20609,127 @@ cwBoot();
     function el(x, y, rx, ry, col, rot) { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, TAU); ctx.fill(); }
     function shadow(x, y, rx, ry, h) { ctx.fillStyle = 'rgba(30,40,15,0.22)'; ctx.beginPath(); addSunShadow(ctx, x, y, rx, ry, h, sunNow); ctx.fill(); }
     const night = () => (DN.on ? DN.night || 0 : 0);
-    // ---- VƯỜN HOA: mỗi lần đặt 1 ô = 1 khóm hoa trên nền cỏ (không viền, không đất); ô kề nhau lan liền thành một mảng hoa ----
+    // ---- VƯỜN HOA: 6 MẪU lấy từ CozyWorld_VuonHoa_Mau.html (A hoa dại thưa · B hoa dại + tulip · C hoa dại + tulip + oải hương · D hoa dại + hoa hồng · E hoa dại + tulip + hoa hồng · F hoa hồng thưa) ----
+    //   Mỗi lần trồng 1 ô; ô đứng riêng: ngẫu nhiên 1 mẫu (d.sty) + độ thưa 75-100% mẫu gốc (d.dk). Ô trồng cạnh ô vườn khác (4 hướng) => cả khóm dùng chung mẫu + độ thưa của ô cũ.
+    //   Cả khóm vẽ 1 lần vào ảnh đệm theo toạ độ thế giới (mép lượn tự nhiên, chỗ hai ô giáp nhau không có đường cắt), cache theo hình dạng + mẫu + độ phân giải.
     const gardenAt = (gx, gy) => { const q = decorAt(gx, gy); return !!(q && q.k === 'garden'); };
-    const G_FLOWERS = [   // [kiểu, màu cánh, màu nhuỵ / màu phụ]
-        ['daisy', '#ffffff', '#f2c230'], ['daisy', '#ffb6d0', '#f2c230'], ['tulip', '#e8414a', '#b52a33'], ['tulip', '#ffcf3a', '#e0a020'], ['tulip', '#ff7eb0', '#d8508a'],
-        ['rose', '#d8344a', '#a01f33'], ['rose', '#ff9a6a', '#e0603a'], ['lav', '#9b7ad8', '#7a5ab8'], ['daisy', '#c9a8ff', '#ffe08a'], ['tulip', '#ffffff', '#e2d6c8'],
-        ['daisy', '#ffe24a', '#e07a20'], ['daisy', '#ff8a3d', '#8a3a10'], ['tulip', '#a05ad8', '#6e3aa8'], ['rose', '#ff6fa8', '#d03a78'], ['rose', '#fff0c0', '#e6c070'],
-        ['lav', '#6a8ae8', '#4a62c0'], ['daisy', '#7ec8ff', '#ffe08a'], ['tulip', '#ff5a3a', '#c0381e'], ['rose', '#c890ff', '#9a58d8'], ['daisy', '#ff4f6a', '#ffe08a']];
-    function gHead(kind, x, y, c1, c2, sc) {   // chỉ vẽ đầu hoa (luống dày: thân lá đã là lớp lá phủ bên dưới)
-        ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); gFlowerHead(kind, c1, c2); ctx.restore();
+    const GV = (() => {
+        function hash2(x, y, k = 0) { let h = (x * 374761393 + y * 668265263 + k * 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967295; }
+        function vnoise(x, y, seed) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); const a = hash2(xi, yi, seed), b = hash2(xi + 1, yi, seed), c = hash2(xi, yi + 1, seed), d = hash2(xi + 1, yi + 1, seed); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+        function fbm(x, y, seed, oct) { let s = 0, a = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, y * f, seed + i * 17); n += a; f *= 2; a *= 0.5; } return s / n; }
+        const smst = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+        function mb32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+        const rngAt = (i, j, k) => mb32((hash2(i, j, k) * 4294967295) >>> 0);
+        function blades(g, x, y, rnd, cols, len, n) { g.lineCap = 'round'; for (let k = 0; k < n; k++) { const a = (n > 1 ? k / (n - 1) - 0.5 : 0) * 1.2 + (rnd() - 0.5) * 0.35, L = len[0] + rnd() * (len[1] - len[0]); g.strokeStyle = cols[(rnd() * cols.length) | 0]; g.lineWidth = 0.9 + rnd() * 0.6; g.beginPath(); g.moveTo(x + (k - n / 2) * 0.5, y); g.quadraticCurveTo(x + Math.sin(a) * L * 0.3, y - L * 0.65, x + Math.sin(a) * L * 0.85, y - L * Math.cos(a) * 0.95); g.stroke(); } }
+        function headDaisy(g, x, y, s, c1, c2) { g.save(); g.translate(x, y); g.scale(s, s * 0.85); g.fillStyle = c1; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; g.beginPath(); g.ellipse(Math.cos(a) * 1.7, Math.sin(a) * 1.7, 1.35, 0.7, a, 0, TAU); g.fill(); } g.fillStyle = 'rgba(0,0,0,0.09)'; g.beginPath(); g.arc(0, 0.4, 1.5, 0, TAU); g.fill(); g.fillStyle = c2; g.beginPath(); g.arc(0, 0, 1.05, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(-0.3, -0.3, 0.35, 0, TAU); g.fill(); g.restore(); }
+        function headCosmos(g, x, y, s, c1, c2) { g.save(); g.translate(x, y); g.scale(s, s * 0.85); g.fillStyle = c1; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.3; g.beginPath(); g.ellipse(Math.cos(a) * 1.8, Math.sin(a) * 1.8, 1.7, 1.15, a, 0, TAU); g.fill(); } g.fillStyle = 'rgba(120,30,60,0.14)'; g.beginPath(); g.arc(0, 0, 1.5, 0, TAU); g.fill(); g.fillStyle = c2; g.beginPath(); g.arc(0, 0, 0.9, 0, TAU); g.fill(); g.restore(); }
+        function headSmall(g, x, y, s, c1, c2) { g.save(); g.translate(x, y); g.scale(s, s * 0.85); g.fillStyle = c1; for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; g.beginPath(); g.arc(Math.cos(a) * 1.15, Math.sin(a) * 1.15, 0.85, 0, TAU); g.fill(); } g.fillStyle = c2; g.beginPath(); g.arc(0, 0, 0.6, 0, TAU); g.fill(); g.restore(); }
+        function headTulip(g, x, y, s, c1, c2) { g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = c2; g.beginPath(); g.moveTo(-1.9, -1.6); g.lineTo(-1, -0.4); g.lineTo(0, -2); g.lineTo(1, -0.4); g.lineTo(1.9, -1.6); g.quadraticCurveTo(2.1, 1.6, 0, 1.9); g.quadraticCurveTo(-2.1, 1.6, -1.9, -1.6); g.fill(); g.fillStyle = c1; g.beginPath(); g.moveTo(-1.5, -1.1); g.lineTo(-0.7, 0); g.lineTo(0, -1.6); g.lineTo(0.7, 0); g.lineTo(1.5, -1.1); g.quadraticCurveTo(1.6, 1.3, 0, 1.5); g.quadraticCurveTo(-1.6, 1.3, -1.5, -1.1); g.fill(); g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.ellipse(-0.6, 0.2, 0.35, 0.8, 0, 0, TAU); g.fill(); g.restore(); }
+        function spike(g, x, yb, H, c1, c2) { g.strokeStyle = '#6f9a5a'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x, yb); g.lineTo(x, yb - H); g.stroke(); const n = 9, top = yb - H; for (let i = 0; i < n; i++) { const t = i / (n - 1), yy = top + 0.6 + i * (H * 0.62 / n), r = 0.62 + t * 0.5, side = i % 2 ? 1 : -1; g.fillStyle = i % 2 ? c1 : c2; g.beginPath(); g.ellipse(x + side * (0.35 + t * 0.55), yy, r, r * 1.2, 0, 0, TAU); g.fill(); } g.fillStyle = c1; g.beginPath(); g.ellipse(x, top, 0.55, 0.9, 0, 0, TAU); g.fill(); }
+        function headRose(g, x, y, s, c1, c2) { g.save(); g.translate(x, y); g.scale(s, s * 0.9); g.fillStyle = c2; g.beginPath(); g.ellipse(0, 0, 1.9, 1.6, 0, 0, TAU); g.fill(); g.fillStyle = c1; g.beginPath(); g.ellipse(0, -0.15, 1.5, 1.25, 0, 0, TAU); g.fill(); g.strokeStyle = c2; g.lineWidth = 0.45; g.beginPath(); g.arc(0, -0.1, 0.9, 0.3, 4.6); g.stroke(); g.beginPath(); g.arc(0.1, -0.2, 0.4, 2, 6.5); g.stroke(); g.fillStyle = 'rgba(255,255,255,0.4)'; g.beginPath(); g.ellipse(-0.6, -0.6, 0.35, 0.3, 0, 0, TAU); g.fill(); g.restore(); }
+        function stem(g, x, y, lean, h) { g.fillStyle = 'rgba(20,50,15,0.2)'; g.beginPath(); g.ellipse(x, y + 0.5, 2.2, 0.9, 0, 0, TAU); g.fill(); g.strokeStyle = '#4f8f3c'; g.lineWidth = 0.8; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + lean, y - h); g.stroke(); }
+        function leafBit(g, x, y, w, h, rot, col) { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, w, h, rot, 0, TAU); g.fill(); }
+        const clusterIdx = (x, y, seed, n) => Math.min(n - 1, (smst(0.3, 0.7, fbm(x * 0.03, y * 0.03, seed, 3)) * n) | 0);
+        const PA = [['daisy', '#ffffff', '#f2c230'], ['daisy', '#ffc2da', '#f2c230'], ['cosmos', '#ff7fae', '#ffe27a'], ['daisy', '#ffe24a', '#d9731c'], ['daisy', '#c9b0ff', '#ffe58a'], ['small', '#7fb8ff', '#fff0a0'], ['cosmos', '#ff9a5a', '#fff0a0'], ['cosmos', '#ffffff', '#f2b830']];
+        const PB = [['#e8414a', '#b52a33'], ['#ff7eb0', '#d8508a'], ['#ffcf3a', '#e0a020'], ['#ff8a3d', '#c9601c'], ['#fff4e6', '#e2d6c8'], ['#a05ad8', '#6e3aa8']];
+        const PC = [['#8a63d6', '#6a45b5'], ['#9b7ad8', '#7a5ab8'], ['#6a8ae8', '#4a62c0'], ['#b48ae6', '#8f62c8'], ['#7c5cc9', '#5a3ea0']];
+        const PR = [['#d8344a', '#a01f33'], ['#ff9a6a', '#e0603a'], ['#ff6fa8', '#d03a78'], ['#fff0c0', '#e6c070'], ['#ffd84d', '#d9a21f'], ['#c890ff', '#9a58d8']];
+        const CA = { seed: 101, mat: 'rgba(56,110,40,0.11)', leafStep: 3.6, leafN: 3, leafLen: [4, 7], leafCols: ['#69a244', '#7bb44c', '#5b9540', '#86b84e'], flStep: 3.4, dens: 0.95, leafP: 0.9,
+            flower(x, y, rnd) { const k = rnd() < 0.4 ? (rnd() * PA.length) | 0 : clusterIdx(x, y, 41, PA.length), p = PA[k], h = 3 + rnd() * 4, lean = (rnd() - 0.5) * 2.4, s = 0.85 + rnd() * 0.4, hd = p[0] === 'daisy' ? headDaisy : p[0] === 'cosmos' ? headCosmos : headSmall;
+                return { h, f: g => { stem(g, x, y, lean, h); leafBit(g, x + lean * 0.4 + 1.5, y - h * 0.45, 1.5, 0.6, -0.5, '#5fa046'); hd(g, x + lean, y - h, s, p[1], p[2]); } }; } };
+        const CB = { flower(x, y, rnd, o) { const lk = (o && o.leafK) || 1, k = rnd() < 0.12 ? (rnd() * PB.length) | 0 : clusterIdx(x, y, 52, PB.length), p = PB[k], h = 6 + rnd() * 4, lean = (rnd() - 0.5) * 1.6, s = 0.95 + rnd() * 0.3;
+                return { h, f: g => { stem(g, x, y, lean, h); leafBit(g, x - 1.7, y - h * 0.4, 0.9 * lk, h * 0.5 * lk, -0.3, '#4f9a5a'); leafBit(g, x + 1.8, y - h * 0.35, 0.9 * lk, h * 0.45 * lk, 0.35, '#5aa86a'); headTulip(g, x + lean, y - h, s, p[0], p[1]); } }; } };
+        const CC = { flower(x, y, rnd) { if (rnd() < 0.08) { const white = rnd() < 0.5, h = 3 + rnd() * 3, lean = (rnd() - 0.5) * 2; return { h, f: g => { stem(g, x, y, lean, h); (white ? headDaisy : headCosmos)(g, x + lean, y - h, 0.85, white ? '#ffffff' : '#ffc2da', white ? '#f2c230' : '#ffe27a'); } }; }
+                const p = PC[rnd() < 0.25 ? (rnd() * PC.length) | 0 : clusterIdx(x, y, 63, PC.length)], H = 8 + rnd() * 5; return { h: H, f: g => { g.fillStyle = 'rgba(20,50,15,0.2)'; g.beginPath(); g.ellipse(x, y + 0.5, 2, 0.8, 0, 0, TAU); g.fill(); spike(g, x, y, H, p[0], p[1]); } }; } };
+        const CR = { seed: 909, mat: 'rgba(40,96,40,0.12)', leafStep: 3.6, leafN: 3, leafLen: [4, 7], leafCols: ['#3f8a3a', '#4f9a44', '#367a33', '#5aa64c'], flStep: 3.8, dens: 0.95, leafP: 0.9,
+            flower(x, y, rnd) { const p = PR[rnd() < 0.3 ? (rnd() * PR.length) | 0 : clusterIdx(x, y, 77, PR.length)], h = 4 + rnd() * 3, lean = (rnd() - 0.5) * 1.6, s = 1.1 + rnd() * 0.35;
+                return { h, f: g => { stem(g, x, y, lean, h); leafBit(g, x - 1.6, y - h * 0.4, 1.4, 0.7, 0.5, '#3f8a3a'); leafBit(g, x + 1.7, y - h * 0.3, 1.4, 0.7, -0.5, '#4f9a44'); headRose(g, x + lean, y - h, s, p[0], p[1]); } }; } };
+        const mix = parts => (x, y, rnd) => { let r = rnd(); for (const [c, w, o] of parts) { if (r < w) return c.flower(x, y, rnd, o); r -= w; } return parts[0][0].flower(x, y, rnd, parts[0][2]); };
+        const TUL = { leafK: 0.5 };
+        const STYLES = [   // giống hệt 6 mẫu cuối của file mẫu (A..F), dens đã nhân hệ số của file
+            Object.assign({}, CA, { name: 'Hoa dại thưa', leafN: 2, leafP: 0.5, dens: CA.dens * 0.75 * 0.75 }),
+            Object.assign({}, CA, { name: 'Hoa dại + tulip', seed: 404, leafP: 0.68, dens: CA.dens * 0.8 * 0.75, flower: mix([[CA, 0.5], [CB, 0.5, TUL]]) }),
+            Object.assign({}, CA, { name: 'Hoa dại + tulip + oải hương', seed: 505, leafN: 2, leafP: 0.5, dens: CA.dens * 0.9 * 0.75, flower: mix([[CA, 2 / 3], [CB, 1 / 6, TUL], [CC, 1 / 6]]) }),
+            Object.assign({}, CA, { name: 'Hoa dại + hoa hồng', seed: 707, leafN: 2, leafP: 0.55, dens: CA.dens * 0.8 * 0.75, flower: mix([[CA, 0.65], [CR, 0.35]]) }),
+            Object.assign({}, CA, { name: 'Hoa dại + tulip + hoa hồng', seed: 808, leafN: 2, leafP: 0.55, dens: CA.dens * 0.8 * 0.75, flower: mix([[CA, 0.4], [CB, 0.35, TUL], [CR, 0.25]]) }),
+            Object.assign({}, CR, { name: 'Hoa hồng thưa', seed: 909, leafN: 2, leafP: 0.5, dens: 0.64 })
+        ];
+        // trường "độ sâu trong khóm" cho tập ô bất kỳ: hợp của các hình chữ nhật bo góc theo từng ô; cạnh giáp ô vườn khác được kéo dài sang ô đó => không có mép ở giữa khóm
+        function makeField(cells) {
+            const R = 14, set = new Set(cells.map(c => c[0] + ',' + c[1])), has = (x, y) => set.has(x + ',' + y);
+            const boxes = [], box = (x0, x1, y0, y1) => boxes.push({ cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, hx: (x1 - x0) / 2 - R, hy: (y1 - y0) / 2 - R });
+            for (const [gx, gy] of cells) {   // mỗi ô 2 thanh: kéo ngang sang ô kề trái/phải, kéo dọc sang ô kề trên/dưới (tách riêng để khóm hình chữ L không bị lấp góc)
+                box(gx * T - (has(gx - 1, gy) ? T : 0), (gx + 1) * T + (has(gx + 1, gy) ? T : 0), gy * T, (gy + 1) * T);
+                box(gx * T, (gx + 1) * T, gy * T - (has(gx, gy - 1) ? T : 0), (gy + 1) * T + (has(gx, gy + 1) ? T : 0));
+            }
+            return (wx, wy) => { let best = -1e9; for (const b of boxes) { const qx = Math.abs(wx - b.cx) - b.hx, qy = Math.abs(wy - b.cy) - b.hy, v = -(Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - R); if (v > best) best = v; } return Math.min(40, best); };
+        }
+        function paint(g, bx, field, st, dk) {
+            const items = [], mats = [], dens = st.dens * dk;
+            const nz = (x, y) => (fbm(x * 0.05, y * 0.05, st.seed, 3) - 0.5) * 5 + (fbm(x * 0.2, y * 0.2, st.seed + 9, 2) - 0.5) * 2;
+            const ls = st.leafStep, fs = st.flStep;
+            for (let j = Math.floor(bx.top / ls); j <= Math.ceil(bx.b / ls); j++) for (let i = Math.floor(bx.l / ls); i <= Math.ceil(bx.r / ls); i++) {
+                const rnd = rngAt(i, j, st.seed + 1), x = (i + (j & 1) * 0.5 + rnd() * 0.8) * ls, y = (j + rnd() * 0.8) * ls;
+                if (x < bx.l || x > bx.r || y < bx.top || y > bx.b - 2) continue;
+                const fn = field(x, y) + nz(x, y), p = smst(-2.5, 1.5, fn) * st.leafP;
+                if (fn < -2.5 || rnd() > p) continue;
+                mats.push([x, y, p]); items.push({ y, f: g => blades(g, x, y, rnd, st.leafCols, st.leafLen, st.leafN) });
+            }
+            for (let j = Math.floor(bx.top / fs); j <= Math.ceil(bx.b / fs); j++) for (let i = Math.floor(bx.l / fs); i <= Math.ceil(bx.r / fs); i++) {
+                const rnd = rngAt(i, j, st.seed + 2), x = (i + (j & 1) * 0.5 + rnd() * 0.8) * fs, y = (j + rnd() * 0.8) * fs;
+                if (x < bx.l || x > bx.r || y < bx.top || y > bx.b - 2) continue;
+                const fl = st.flower(x, y, rnd), fn = field(x, y - fl.h * 0.8) + nz(x, y - fl.h * 0.8);
+                if (rnd() > smst(-1, 5, fn) * dens) continue;
+                items.push({ y, f: fl.f });
+            }
+            g.fillStyle = st.mat; for (const m of mats) { g.globalAlpha = m[2]; g.beginPath(); g.ellipse(m[0], m[1] - 1, 4.8, 3.2, 0, 0, TAU); g.fill(); }
+            g.globalAlpha = 1; items.sort((a, b) => a.y - b.y); for (const it of items) it.f(g);
+        }
+        const cache = new Map();
+        function sprite(cells, sty, dk, S) {   // ảnh đệm cả khóm (toạ độ thế giới) ở độ phân giải S
+            const key = cells.map(c => c[0] + ',' + c[1]).sort().join(';') + '|' + sty + '|' + dk.toFixed(3) + '|' + S;
+            let sp = cache.get(key); if (sp) { sp.used = frameNo; return sp; }
+            if (cache.size > 80) { for (const [k, v] of cache) if (frameNo - v.used > 600) cache.delete(k); }
+            const M = 14, TOP = 18, xs = cells.map(c => c[0]), ys = cells.map(c => c[1]);
+            const bx = { l: Math.min(...xs) * T - M, r: (Math.max(...xs) + 1) * T + M, top: Math.min(...ys) * T - M, b: (Math.max(...ys) + 1) * T + M };
+            const t = bx.top - TOP, c = document.createElement('canvas'); c.width = Math.ceil((bx.r - bx.l) * S); c.height = Math.ceil((bx.b - t) * S);
+            const g = c.getContext('2d'); g.scale(S, S); g.translate(-bx.l, -t);
+            paint(g, bx, makeField(cells), STYLES[sty] || STYLES[0], dk);
+            sp = { c, l: bx.l, t, w: bx.r - bx.l, h: bx.b - t, used: frameNo }; cache.set(key, sp); return sp;
+        }
+        return { STYLES, sprite };
+    })();
+    // Độ thưa hoa: (75-100% mẫu gốc) x (45-75%) => khoảng 34-75% mật độ hoa của file mẫu (bản trước quá dày)
+    const gardenDk = () => +((0.75 + Math.random() * 0.25) * (0.45 + Math.random() * 0.3)).toFixed(3);
+    function gardenGroup(d0) {   // khóm (các ô vườn nối 4 hướng) chứa ô d0
+        const out = [d0], seen = new Set([d0]);
+        for (let i = 0; i < out.length; i++) { const d = out[i]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const q = decorAt(d.gx + dx, d.gy + dy); if (q && q.k === 'garden' && !seen.has(q)) { seen.add(q); out.push(q); } } }
+        return out;
     }
-    function gFlowerHead(kind, c1, c2) {   // đầu hoa tại (0,0)
-        if (kind === 'daisy') {
-            ctx.fillStyle = c1; for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; ctx.beginPath(); ctx.ellipse(Math.cos(a) * 1.6, Math.sin(a) * 1.2, 1.25, 0.65, a, 0, TAU); ctx.fill(); }
-            ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.beginPath(); ctx.ellipse(0, 0.6, 1.4, 0.5, 0, 0, TAU); ctx.fill();
-            el(0, 0, 1.05, 0.9, c2); el(-0.3, -0.3, 0.4, 0.35, 'rgba(255,255,255,.6)');
-        } else if (kind === 'tulip') {
-            ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(-1.9, -1.6); ctx.lineTo(-1, -0.4); ctx.lineTo(0, -2); ctx.lineTo(1, -0.4); ctx.lineTo(1.9, -1.6); ctx.quadraticCurveTo(2.1, 1.6, 0, 1.9); ctx.quadraticCurveTo(-2.1, 1.6, -1.9, -1.6); ctx.fill();
-            ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(-1.5, -1.1); ctx.lineTo(-0.7, 0); ctx.lineTo(0, -1.6); ctx.lineTo(0.7, 0); ctx.lineTo(1.5, -1.1); ctx.quadraticCurveTo(1.6, 1.3, 0, 1.5); ctx.quadraticCurveTo(-1.6, 1.3, -1.5, -1.1); ctx.fill();
-            el(-0.6, 0.2, 0.35, 0.8, 'rgba(255,255,255,.35)');
-        } else if (kind === 'rose') {
-            el(0, 0, 1.9, 1.6, c2); el(0, -0.15, 1.5, 1.25, c1);
-            ctx.strokeStyle = c2; ctx.lineWidth = 0.45; ctx.beginPath(); ctx.arc(0, -0.1, 0.9, 0.3, 4.6); ctx.stroke(); ctx.beginPath(); ctx.arc(0.1, -0.2, 0.4, 2, 6.5); ctx.stroke();
-            el(-0.6, -0.6, 0.35, 0.3, 'rgba(255,255,255,.4)');
-        } else {   // oải hương: bông dài nhiều chấm tím
-            for (let i = 0; i < 6; i++) { el((i % 2 ? 0.55 : -0.55), 1.4 - i * 0.85, 0.75, 0.6, i % 2 ? c1 : c2); }
-            el(0, -3.6, 0.5, 0.5, c1);
-        }
+    function gardenAdopt(d) {   // ô vừa trồng: cạnh khóm cũ => theo mẫu + độ thưa của khóm cũ (gộp nhiều khóm thì cả khóm theo ô kề đầu tiên); đứng riêng => ngẫu nhiên
+        let src = null; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const q = decorAt(d.gx + dx, d.gy + dy); if (q && q.k === 'garden' && q !== d && q.sty !== undefined) { src = q; break; } }
+        if (src) { for (const q of gardenGroup(d)) { q.sty = src.sty; q.dk = src.dk; q.dv = src.dv; } }
+        else { d.sty = (Math.random() * GV.STYLES.length) | 0; d.dk = gardenDk(); d.dv = 2; }
     }
-    function drawGarden(d, time) {   // KHÓM HOA trên nền cỏ: không viền, không đất; lá xanh mép lượn tự nhiên, hoa nhiều loại nhiều màu mọc lộn xộn; ô vườn kề nhau (4 hướng) khóm lan sang nhau liền một mảng
-        const h = T / 2, cL = gardenAt(d.gx - 1, d.gy), cR = gardenAt(d.gx + 1, d.gy), cU = gardenAt(d.gx, d.gy - 1), cD = gardenAt(d.gx, d.gy + 1);
-        const H = (a, b, k) => { const v = Math.sin(a * 127.1 + b * 311.7 + k * 74.7 + 1.3) * 43758.5453; return v - Math.floor(v); };
-        const x0 = cL ? -h - 2 : -h + 4, x1 = cR ? h + 2 : h - 4, y0 = cU ? -h - 2 : -h + 5, y1 = cD ? h + 2 : h - 3;
-        const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
-        const inside = (x, y) => { const ux = (x - cx) / rx, uy = (y - cy) / ry; const ex = (x < cx ? cL : cR) ? 0 : ux * ux, ey = (y < cy ? cU : cD) ? 0 : uy * uy; return ex + ey <= 1; };   // phía nối sang ô vườn kế bên: không bo
-        el(cx, cy + 1.5, rx + 1, ry + 0.5, 'rgba(30,60,18,0.16)');   // bóng mát dưới khóm
-        const LEAF = ['#3d7a32', '#4b8f3e', '#5aa24a', '#447f36'];
-        for (let yy = y0 + 1, r = 0; yy <= y1 - 0.5; yy += 2.7, r++) for (let xx = x0 + 1 + (r % 2) * 1.6; xx <= x1 - 0.5; xx += 3.1) {
-            const gx = Math.round(d.gx * T + xx), gy = Math.round(d.gy * T + yy), jx = (H(gx, gy, 1) - 0.5) * 1.8, jy = (H(gx, gy, 2) - 0.5) * 1.6;
-            if (!inside(xx + jx, yy + jy)) continue;
-            el(xx + jx, yy + jy, 2.2 + H(gx, gy, 5) * 0.9, 1.6 + H(gx, gy, 6) * 0.6, LEAF[(H(gx, gy, 3) * 4) | 0], H(gx, gy, 4) - 0.5);
+    function gardenGroups() {   // danh sách khóm; khóm thiếu mẫu (bản lưu cũ) được gán mẫu ngẫu nhiên chung
+        const gs = [], seen = new Set();
+        for (const d of ext().decor) {
+            if (d.k !== 'garden' || seen.has(d)) continue;
+            const grp = gardenGroup(d); grp.forEach(q => seen.add(q));
+            const ref = grp.find(q => q.sty !== undefined) || null;
+            let sty = ref ? ref.sty : (Math.random() * GV.STYLES.length) | 0, dk = ref && ref.dk ? ref.dk : gardenDk();
+            if (ref && ref.dv !== 2) dk = +(dk * (0.45 + Math.random() * 0.3)).toFixed(3);   // khóm của bản trước (75-100%): giảm còn 45-75% như mật độ mới
+            for (const q of grp) if (q.sty !== sty || q.dk !== dk || q.dv !== 2) { q.sty = sty; q.dk = dk; q.dv = 2; }
+            gs.push({ cells: grp.map(q => [q.gx, q.gy]), sty, dk, list: grp });
         }
-        const heads = [];
-        for (let yy = y0 + 1.5, r = 0; yy <= y1 - 1; yy += 3.4, r++) for (let xx = x0 + 1.5 + (r % 2) * 1.8; xx <= x1 - 1; xx += 3.6) {
-            const gx = Math.round(d.gx * T + xx), gy = Math.round(d.gy * T + yy), px = xx + (H(gx, gy, 7) - 0.5) * 2.6, py = yy + (H(gx, gy, 8) - 0.5) * 2.4;
-            if (!inside(px, py + 1) || H(gx, gy, 9) < 0.475) continue;   // mật độ hoa ~75% bản trước; chỗ trống lộ lá xanh cho tự nhiên
-            heads.push([px, py, G_FLOWERS[(H(gx, gy, 10) * G_FLOWERS.length) | 0], 1.05 + H(gx, gy, 11) * 0.35]);
-        }
-        heads.sort((p, q) => p[1] - q[1]);
-        for (let i = 0; i < heads.length; i++) { const q = heads[i]; gHead(q[2][0], q[0] + Math.sin(time * 1.4 + i * 1.3 + d.seed * 6) * 0.25, q[1] - 1, q[2][1], q[2][2], q[3]); }
+        return gs;
+    }
+    function drawGardenGroup(G, x, y, time) {
+        const S = (() => { const need = camera.zoom * Math.min(2.5, window.devicePixelRatio || 1) * 0.9; for (const v of [0.5, 1, 2, 4]) if (v >= need) return v; return 4; })();
+        const sp = GV.sprite(G.cells, G.sty, G.dk, S), born = Math.max(...G.list.map(q => q.born || 0)), k = Math.min(1, (simClock - born) / 1.2 + 0.3);
+        if (k < 1) { ctx.save(); ctx.globalAlpha = k; }
+        ctx.drawImage(sp.c, sp.l, sp.t, sp.w, sp.h);
+        if (k < 1) ctx.restore();
     }
 
     // ---- ĐÀI PHUN NƯỚC: bể đá tròn có thành dày + mạch đá, mặt nước lấp lánh, trụ chạm khắc, bát tầng trên tràn nước thành màn, vòi đỉnh phun, gợn sóng chỗ nước rơi ----
@@ -20763,8 +20836,6 @@ cwBoot();
             drawLanternPost(d, time);
         } else if (d.k === 'bench') {
             ctx.translate(0, -6); drawBench3D(benchAng(d));   // gốc = tâm ô + 2 px
-        } else if (d.k === 'garden') {
-            ctx.translate(0, -6); drawGarden(d, time);   // gốc = tâm ô
         } else if (d.k === 'fountain') {
             drawFountain(d, time);
         }
@@ -21060,14 +21131,38 @@ cwBoot();
             }
         }
     }
-    function drawFrog(f, x, y, time) {
-        const a = Math.min(1, f.t / 1.5, (f.life - f.t) / 2), h = f.hop > 0 ? Math.sin((1 - f.hop) * Math.PI) * 5 : 0;
-        ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.fillStyle = 'rgba(30,40,15,0.2)'; ctx.beginPath(); ctx.ellipse(0, 1, 3.4, 1.2, 0, 0, TAU); ctx.fill();
-        ctx.translate(0, -h); ctx.scale(f.dir * 1.7, 1.7);   // ếch to hơn chút cho dễ thấy
-        const c1 = f.col ? '#7d9a3a' : '#4fa04a', c2 = f.col ? '#5c7428' : '#357a35';
-        el(-1, -2, 3.6, 2.4, c2); el(-0.4, -2.6, 3.2, 2.2, c1); el(2.4, -3.6, 1.6, 1.4, c1);
-        el(2.8, -4.6, 0.9, 0.9, '#f4f0d0'); el(3, -4.6, 0.45, 0.45, '#1d1a14');
-        if (f.croak > 0) { f.croak = Math.max(0, f.croak - 0.016); const q = Math.min(1, f.croak * 3); if (q > 0.02) el(3.6, -2.2, 1.6 * q, 1.2 * q, 'rgba(230,240,190,.9)'); }   // phồng túi kêu
+    function drawFrog(f, x, y, time) {   // ếch con: thân tròn, bụng kem, đốm lưng, mắt lồi to có ánh sáng + chớp mắt, má hồng, miệng cười, chân sau gập (nhảy thì duỗi), chân trước có ngón, túi kêu phồng
+        const a = Math.min(1, f.t / 1.5, (f.life - f.t) / 2), hopK = f.hop > 0 ? Math.sin((1 - f.hop) * Math.PI) : 0, h = hopK * 5;
+        ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y);
+        ctx.fillStyle = 'rgba(30,40,15,' + (0.22 - hopK * 0.1).toFixed(3) + ')'; ctx.beginPath(); ctx.ellipse(0, 1, 3.6 - hopK, 1.3, 0, 0, TAU); ctx.fill();
+        ctx.translate(0, -h); ctx.scale(f.dir * 1.7, 1.7);
+        const P = f.col ? { c1: '#8aa646', c2: '#647c2e', c3: '#a9c25e', sp: '#56692a' } : { c1: '#5fb04f', c2: '#3c8a3c', c3: '#86cc6a', sp: '#3f8f3f' };
+        const sd = f.seed || (f.seed = Math.random() * 10), blink = ((time + sd) % 4.2) < 0.13, dark = '#1d1a14';
+        if (hopK > 0.05) {   // đang nhảy: chân sau duỗi dài ra sau
+            el(-3.4, -1.6, 2.6, 0.9, P.c2, -0.35); el(-5.6, -0.7, 1.4, 0.55, P.c1, -0.2);
+            for (let i = 0; i < 3; i++) el(-6.6, -1.1 + i * 0.5, 0.6, 0.3, P.c3, 0.2);
+        } else {   // ngồi: đùi gập bên hông + bàn chân màng
+            el(-2.1, -1.5, 2.3, 1.6, P.c2, -0.2);
+            el(-1.2, -0.25, 1.7, 0.55, P.c1); for (let i = 0; i < 3; i++) el(-0.1 + i * 0.55, 0.05, 0.45, 0.3, P.c3);
+        }
+        el(-0.5, -2.4, 3.5, 2.5, P.c2); el(-0.3, -2.7, 3.2, 2.2, P.c1);                              // thân
+        el(-0.9, -3.7, 1.6, 0.6, 'rgba(255,255,255,0.22)', -0.15);                                   // ánh sáng trên lưng
+        el(0.7, -1.5, 2.3, 1.15, '#eef2c4');                                                          // bụng kem
+        el(-1.8, -3.0, 0.55, 0.42, P.sp); el(-0.6, -3.9, 0.45, 0.35, P.sp); el(-2.6, -2.2, 0.4, 0.32, P.sp);   // đốm lưng
+        el(2.3, -3.3, 2.1, 1.65, P.c1);                                                               // đầu
+        el(2.6, -2.5, 1.5, 0.75, '#eef2c4');                                                          // cằm
+        el(1.9, -0.8, 0.5, 1.0, P.c2, 0.15); el(2.2, 0.05, 0.55, 0.28, P.c3); el(2.75, 0.05, 0.45, 0.25, P.c3);   // chân trước + ngón
+        const eye = (ex, ey, k) => {   // mắt lồi: gò mắt xanh, lòng trắng, con ngươi to, chấm sáng; chớp = mí xanh khép
+            el(ex, ey, 1.25 * k, 1.15 * k, P.c1);
+            if (blink) { ctx.strokeStyle = dark; ctx.lineWidth = 0.35; ctx.beginPath(); ctx.arc(ex, ey - 0.1, 0.65 * k, 0.15, Math.PI - 0.15); ctx.stroke(); return; }
+            el(ex + 0.05, ey - 0.05, 0.92 * k, 0.88 * k, '#fbfaf0'); el(ex + 0.22, ey, 0.58 * k, 0.62 * k, dark);
+            el(ex + 0.02, ey - 0.28, 0.24 * k, 0.24 * k, '#ffffff'); el(ex + 0.42, ey + 0.2, 0.1 * k, 0.1 * k, '#ffffff');
+        };
+        eye(2.55, -4.75, 1.05);                                                                       // một mắt (nhìn nghiêng) cho hiền
+        el(3.55, -2.95, 0.55, 0.32, 'rgba(255,140,150,0.55)');                                        // má hồng
+        el(4.05, -3.85, 0.12, 0.1, P.c2);                                                             // lỗ mũi
+        ctx.strokeStyle = '#2f5a2a'; ctx.lineWidth = 0.32; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(2.7, -2.95); ctx.quadraticCurveTo(3.5, -2.45, 4.25, -3.15); ctx.stroke();   // miệng cười
+        if (f.croak > 0) { f.croak = Math.max(0, f.croak - 0.016); const q = Math.min(1, f.croak * 3); if (q > 0.02) { el(3.2, -1.9, 1.7 * q, 1.3 * q, 'rgba(240,246,205,.95)'); el(2.8, -2.3, 0.6 * q, 0.4 * q, 'rgba(255,255,255,.7)'); } }   // phồng túi kêu
         ctx.restore();
     }
     function lakeGroups() {   // các hồ lớn (>= 24 ô nước): danh sách ô nước theo id hồ
@@ -21252,7 +21347,13 @@ cwBoot();
             for (let i = 0; i < MF.people.length; i++) { const b = MF.people[i]; if (i % 2 || !b.fest || !b.fest.on || b.gone) continue; if (b.x >= vl - 30 && b.x <= vr + 30 && b.y >= vt - 30 && b.y <= vb + 40) q.push({ t: 20, y: b.y + 0.6, cx: b.x, cy: b.y, o: b, fn: drawStarLantern }); }
             for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + 0.2, x = MF.x + Math.cos(a) * 5.4 * T, y = MF.y + Math.sin(a) * 4.3 * T; if (x >= vl - 30 && x <= vr + 30 && y >= vt - 40 && y <= vb + 40) q.push({ t: 20, y, cx: x, cy: y, o: { i }, fn: drawMoonPost }); }
         }
+        for (const G of gardenGroups()) {   // vườn hoa: vẽ cả khóm một lần, xếp chiều sâu theo hàng ô thấp nhất của khóm
+            const xs = G.cells.map(c => c[0]), ys = G.cells.map(c => c[1]), x0 = Math.min(...xs) * T, x1 = (Math.max(...xs) + 1) * T, y0 = Math.min(...ys) * T, y1 = (Math.max(...ys) + 1) * T;
+            if (x1 < vl - 40 || x0 > vr + 40 || y1 < vt - 40 || y0 > vb + 60) continue;
+            q.push({ t: 20, y: y1 - T / 2 + 6, cx: 0, cy: 0, o: G, fn: drawGardenGroup });
+        }
         for (const d of ext().decor) {
+            if (d.k === 'garden') continue;
             const f = DECOR_KINDS[d.k] ? DECOR_KINDS[d.k].foot : 1, x = (d.gx + 0.5) * T, y = (d.gy + 0.5) * T;
             if (x < vl - 80 || x > vr + 80 || y < vt - 80 || y > vb + 100) continue;
             q.push({ t: 20, y: d.k === 'bench' ? y - 4 : y + (f > 1 ? T * 1.2 : 6), cx: x, cy: y + (d.k === 'garden' ? 6 : 8), o: d, fn: drawDecor });   // ghế đá vẽ TRƯỚC người ngồi trên nó
@@ -21289,7 +21390,7 @@ cwBoot();
         b.innerHTML = '<span class="i">🏮</span><span>Trang trí</span><span class="bd"></span><span class="k">5</span>';
         const cap = bar.querySelector('.cwp-cap'); bar.insertBefore(b, cap || null);
     }, 1200);
-    window.cwLife = { benchSlots, benchVisit: (b, R) => benchVisitBot(b, R || 14), unlocked: () => unl().slice(), unlockOne, decor: () => ext().decor, wishes: () => wishes, wishTry, frogsSpawn, setDecorKind, rainbowNow: () => { rainbowNew(); return rainbow; }, meteorNow: () => { meteor = { t: 0, d: 45, list: [] }; } };
+    window.cwLife = { frogs: () => frogs, gardenAdopt, gardenGroups, benchSlots, benchVisit: (b, R) => benchVisitBot(b, R || 14), unlocked: () => unl().slice(), unlockOne, decor: () => ext().decor, wishes: () => wishes, wishTry, frogsSpawn, setDecorKind, rainbowNow: () => { rainbowNew(); return rainbow; }, meteorNow: () => { meteor = { t: 0, d: 45, list: [] }; } };
 })();
 
     </script>
