@@ -1954,6 +1954,14 @@ const DF_EBONY_SHARE = 0.25, DF_EBONY_K = 0.6;   // 1/4 số chuồn chuồn là
         og.gain.setValueAtTime(0.0001, t); og.gain.linearRampToValueAtTime(v * 0.5, t + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
         o.connect(og); og.connect(dest); o.start(t); o.stop(t + 0.1);
     }
+    let churchT = -1e9, churchChkT = -1e9, churchHas = false;
+    const CHURCH_GAP = 45;   // giây thật tối thiểu giữa hai hồi chuông nhà thờ
+    function churchOnIsle(now) {   // đảo có nhà thờ chưa (quét lưới, nhớ 15 giây)
+        if (now - churchChkT < 15) return churchHas;
+        churchChkT = now; churchHas = false;
+        try { for (let x = 0; x < GRID_W && !churchHas; x++) for (let y = 0; y < GRID_H; y++) { const c = grid[x][y]; if (c.type === TYPE_HOUSE && HOUSE_VARIANTS[c.houseVar] && HOUSE_VARIANTS[c.houseVar].special === 'church') { churchHas = true; break; } } } catch (e) { }
+        return churchHas;
+    }
     function bell(t, v, pan) {   // chuông làng: 3 tiếng ngân, các hoạ âm lệch nhau cho ra tiếng kim loại mềm
         const dest = pannerTo(natBus, pan), f0 = 587.33;
         for (let k = 0; k < 3; k++) {
@@ -2320,10 +2328,15 @@ const DF_EBONY_SHARE = 0.25, DF_EBONY_K = 0.6;   // 1/4 số chuồn chuồn là
             const bk = villageBellK();
             if (bk.k > 0.15) { bellArm = false; bell(now + 0.1, G51_BELL * bk.k, bk.pan); }
         }
-        // chuông nhà thờ điểm giờ: mỗi khi giờ game sang mốc 15 phút (:00 / :15 / :30 / :45) thì đánh 1 lần, nghe khắp bản đồ (không theo khoảng cách như chuông làng)
-        const q = Math.floor(E.hour * 4 + 1e-6);
+        // chuông nhà thờ: [SỬA LỖI] trước đây đánh mỗi 15 phút giờ game (= ~3 giây thật vì 1 ngày game chỉ 5 phút) trong khi mỗi hồi chuông dài ~5 giây
+        //   => "coong coong" liên tục, kể cả khi đảo chưa có nhà thờ. Nay: CHỈ khi đảo có nhà thờ, đánh 1 hồi lúc 6h / 12h / 18h giờ game,
+        //   cách nhau ít nhất CHURCH_GAP giây thật, và không đánh khi đang tua nhanh (> x4)
+        const q = Math.floor(E.hour + 1e-6);
         if (churchQ < 0) churchQ = q;   // mới bật âm thanh / mới vào ván: chỉ bắt đầu theo dõi từ đây, không đánh ngay
-        else if (q !== churchQ) { churchQ = q; bell(now + 0.1, G51_BELL * 0.85); }
+        else if (q !== churchQ) {
+            churchQ = q;
+            if ((q === 6 || q === 12 || q === 18) && E.speed <= 4 && now - churchT >= CHURCH_GAP && churchOnIsle(now)) { churchT = now; bell(now + 0.1, G51_BELL * 0.85); }
+        }
     }
 
     function tick() {
