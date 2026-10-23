@@ -176,10 +176,11 @@
         }
         #evt-bar { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6; padding: 6px 16px; border-radius: 16px; background: rgba(60,50,40,0.78); color: #fff4d6; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.6s; white-space: nowrap; }   /* [V44] thanh báo biến cố */
         #evt-bar.show { opacity: 1; }
-        #species-toast { position: fixed; top: 46px; left: 50%; transform: translateX(-50%); z-index: 6; padding: 6px 16px; border-radius: 16px; background: rgba(60,50,40,0.78); color: #fff4d6; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.6s; white-space: nowrap; }   /* [V81] thông báo loài thú mới */
+        #species-toast { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6; padding: 6px 16px; border-radius: 16px; background: rgba(60,50,40,0.78); color: #fff4d6; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.6s; white-space: nowrap; }   /* [V81] thông báo loài thú mới */
         #species-toast.show { opacity: 1; }
 #species-toast .cws, .cws { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; margin: 0 0.5px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='fg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FFF3A0'/%3E%3Cstop offset='.45' stop-color='%23F9D81E'/%3E%3Cstop offset='1' stop-color='%23F1B800'/%3E%3C/linearGradient%3E%3ClinearGradient id='fs' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23F7F7F9'/%3E%3Cstop offset='.5' stop-color='%23E4E4E8'/%3E%3Cstop offset='1' stop-color='%23CBCBD0'/%3E%3C/linearGradient%3E%3CclipPath id='fc'%3E%3Cpolygon points='12.00,3.70 14.53,9.42 20.75,10.06 16.09,14.23 17.41,20.34 12.00,17.20 6.59,20.34 7.91,14.23 3.25,10.06 9.47,9.42'/%3E%3C/clipPath%3E%3CclipPath id='fL'%3E%3Crect x='0' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3CclipPath id='fR'%3E%3Crect x='12' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3C/defs%3E%3Cpolygon points='12.00,2.50 14.94,8.85 21.89,9.69 16.76,14.45 18.11,21.31 12.00,17.90 5.89,21.31 7.24,14.45 2.11,9.69 9.06,8.85' fill='url(%23fg)' stroke='%23E78A12' stroke-width='1.3' stroke-linejoin='round'/%3E%3Cpath d='M-2,-2 L26,-2 L-2,17 Z' fill='%23fff' opacity='.32' clip-path='url(%23fc)'/%3E%3C/svg%3E") center / contain no-repeat; }   /* [G62] sao trọn (vẽ lại từ ảnh mẫu) */
-.cws.h { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='hg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FFF3A0'/%3E%3Cstop offset='.45' stop-color='%23F9D81E'/%3E%3Cstop offset='1' stop-color='%23F1B800'/%3E%3C/linearGradient%3E%3ClinearGradient id='hs' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23F7F7F9'/%3E%3Cstop offset='.5' stop-color='%23E4E4E8'/%3E%3Cstop offset='1' stop-color='%23CBCBD0'/%3E%3C/linearGradient%3E%3CclipPath id='hc'%3E%3Cpolygon points='12.00,3.70 14.53,9.42 20.75,10.06 16.09,14.23 17.41,20.34 12.00,17.20 6.59,20.34 7.91,14.23 3.25,10.06 9.47,9.42'/%3E%3C/clipPath%3E%3CclipPath id='hL'%3E%3Crect x='0' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3CclipPath id='hR'%3E%3Crect x='12' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3C/defs%3E%3Cg clip-path='url(%23hR)'%3E%3Cpolygon points='12.00,2.50 14.94,8.85 21.89,9.69 16.76,14.45 18.11,21.31 12.00,17.90 5.89,21.31 7.24,14.45 2.11,9.69 9.06,8.85' fill='url(%23hs)' stroke='%23A9A9AE' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/g%3E%3Cg clip-path='url(%23hL)'%3E%3Cpolygon points='12.00,2.50 14.94,8.85 21.89,9.69 16.76,14.45 18.11,21.31 12.00,17.90 5.89,21.31 7.24,14.45 2.11,9.69 9.06,8.85' fill='url(%23hg)' stroke='%23E78A12' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/g%3E%3Cpath d='M-2,-2 L26,-2 L-2,17 Z' fill='%23fff' opacity='.32' clip-path='url(%23hc)'/%3E%3C/svg%3E"); }   /* [G62] nửa sao: nửa trái vàng, nửa phải xám */
+.cws.h { transform: scaleX(-1); }
+        .cws.h { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='hg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FFF3A0'/%3E%3Cstop offset='.45' stop-color='%23F9D81E'/%3E%3Cstop offset='1' stop-color='%23F1B800'/%3E%3C/linearGradient%3E%3ClinearGradient id='hs' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23F7F7F9'/%3E%3Cstop offset='.5' stop-color='%23E4E4E8'/%3E%3Cstop offset='1' stop-color='%23CBCBD0'/%3E%3C/linearGradient%3E%3CclipPath id='hc'%3E%3Cpolygon points='12.00,3.70 14.53,9.42 20.75,10.06 16.09,14.23 17.41,20.34 12.00,17.20 6.59,20.34 7.91,14.23 3.25,10.06 9.47,9.42'/%3E%3C/clipPath%3E%3CclipPath id='hL'%3E%3Crect x='0' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3CclipPath id='hR'%3E%3Crect x='12' y='0' width='12' height='26'/%3E%3C/clipPath%3E%3C/defs%3E%3Cg clip-path='url(%23hR)'%3E%3Cpolygon points='12.00,2.50 14.94,8.85 21.89,9.69 16.76,14.45 18.11,21.31 12.00,17.90 5.89,21.31 7.24,14.45 2.11,9.69 9.06,8.85' fill='url(%23hs)' stroke='%23A9A9AE' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/g%3E%3Cg clip-path='url(%23hL)'%3E%3Cpolygon points='12.00,2.50 14.94,8.85 21.89,9.69 16.76,14.45 18.11,21.31 12.00,17.90 5.89,21.31 7.24,14.45 2.11,9.69 9.06,8.85' fill='url(%23hg)' stroke='%23E78A12' stroke-width='1.3' stroke-linejoin='round'/%3E%3C/g%3E%3Cpath d='M-2,-2 L26,-2 L-2,17 Z' fill='%23fff' opacity='.32' clip-path='url(%23hc)'/%3E%3C/svg%3E"); }   /* [G62] nửa sao: nửa trái vàng, nửa phải xám */
         .stats + .stats { margin-top: 2px; }   /* [V16] dòng thứ 2 của thanh thông tin */
     </style>
 </head>
@@ -558,6 +559,7 @@ const BAMBOO_P    = [0, 0, 0, 0.04, 0.10, 0.18, 0.22, 0.22];       // bụi tre 
 const MANGROVE_P  = [0, 0, 0, 0, 0, 0.30, 0.55, 0.70];             // đước (49), sát biển
 const BAMBOO_GOLD_SHARE = 0.20, BAMBOO_STRIPE_SHARE = 0.08;         // trong các khóm tre: ngà vàng 20%, ngà vàng sọc xanh 8% (chỉ từ 4/8 và 5,5/8 trở xuống)
 const BAMBOO_WATER_R = 4, WILLOW_WATER_R = 1, FRUIT_HOUSE_R = 3, FRUIT_FIELD_R = 2;
+const WILLOW_SHORE_HALF = 0.5;   // tỉ lệ ra liễu ở ô SÁT MÉP HỒ nhân thêm hệ số này (0.5 = giảm một nửa)
 const WILLOW_SHORE_R = 1, WILLOW_SHORE_MULT = 4, WILLOW_SHORE_CAP = 0.7, WILLOW_LIVE_R = 2;   // liễu chỉ mọc kề hồ (<= 1 ô), xác suất x4 (tối đa 70%); sống tiếp khi còn <= 2 ô cách nước
 // CÂY DỪA: chỉ từ dải 3/8 (COCONUT_FROM) xuống 8/8. Cạnh hồ: đúng luật liễu (WILLOW_P, cùng hệ số ẩm / sát mép hồ x4 / trần 70%).
 //   Sát biển: cùng cơ chế "hạt + cụm" như đước (MANGROVE_SEED_K, MANGROVE_EXPAND_K, cụm bán kính 2) nhưng gấp COCONUT_COAST_MULT = 3 lần đước, và mọc trên ĐẤT sát bãi biển (không mọc trong nước nông).
@@ -859,12 +861,14 @@ const NATURE_AFTER = 2.5, NATURE_SPREAD = 0.12, NATURE_JITTER = 1.4; const COAST
 //   2. 5-8 vịnh/eo biển ăn sâu vào đất, cong theo nhiễu, đầu vịnh phình tròn (hồ gần biển nhập vào biển)
 //   3. hồ tự nhiên nằm gần biển có xác suất được nối ra biển bằng eo (carveStraits)
 //   Ô seaKeep không bao giờ thành đất; vùng đất bị cắt khỏi đảo chính cũng thành biển.
-const MAP_MIN_FRAC = 0.70, MAP_TRY_FRAC = 0.71, MAP_TRIES = 60;   // so với LAND_REF (khung đất cũ 192x108), không phải cả bản đồ đã nới biển   // đất tối đa (MAX_LAND / TOTAL_CELLS, số hiện ở HUD) không bao giờ dưới 70%; lúc sinh bản đồ bốc lại tới khi >= 71% (chừa chỗ cho eo biển)
+const MAP_MIN_FRAC = 0.70, MAP_TRY_FRAC = 0.70, MAP_TRIES = 60;   // so với LAND_REF (khung đất cũ 192x108), không phải cả bản đồ đã nới biển   // đất tối đa (MAX_LAND / TOTAL_CELLS, số hiện ở HUD) không bao giờ dưới 70%; lúc sinh bản đồ bốc lại tới khi >= 71% (chừa chỗ cho eo biển)
 const INLET_EXCL = 28;                     // không khoét vào vòng quanh đảo khởi đầu (ô)
 // BỜ BIỂN MƯỢT HƠN: ít vịnh, vịnh ngắn và rộng, eo biển hiếm và rộng, nhiễu hình dạng nhỏ lại, thêm lọc làm mượt
 const COAST_N1 = 1.25, COAST_N2 = 0.25;    // biên độ nhiễu lớn / nhỏ
 const INLET_MIN = 2, INLET_VAR = 2;        // số vịnh = 2..3
 const STRAIT_PROB = 0.18, STRAIT_MAX = 2, STRAIT_REACH = 8, STRAIT_R = 2.3;   // v14: 0.6 / không giới hạn / 11 / 1.6
+let COAST_STRAIGHT_ON = true, COAST_STRAIGHT_D = 7, SOFT_FRAME_A = 7, SOFT_FRAME_OUT = 2, COAST_CAPE_P = 0.5;   // SOFT_FRAME_OUT: đất được lấn ra ngoài khung cũ tối đa ngần này ô · COAST_CAPE_P: xác suất chọn "bồi mũi đất" thay vì khoét vịnh để phá đoạn bờ thẳng   // độ lùi tối đa (ô) của mép khung đất cũ khi cắt bờ mềm; 0 = như cũ (cắt thẳng)
+const COAST_STRAIGHT_FRAC = 1 / 3, COAST_STRAIGHT_ITER = 30;   // luật bờ không quá thẳng: cửa sổ = 1/3 cạnh; độ lệch khỏi đường thẳng < D ô => bị coi là thẳng và bị khoét vịnh
 const COAST_SMOOTH = 2;                    // số lượt lọc đa số 3x3 trên hình dạng bờ
 // Cỏ-cây trên đất mới: cây non mọc theo cùng trường rừng của lúc sinh thế giới
 // Cách biển hở (ô chưa phải đất, hoặc ngoài bản đồ) trong bán kính r? Dựa trên landFlag nên đúng ngay cả khi mảnh đất còn đang trồi lên.
@@ -886,6 +890,8 @@ const PLANT_FULL_AT = 21;         // dừng bớt trồng khi >= ngần này câ
 //   Thời gian rảnh của bot dành cho việc khác, vd. chăm sóc ruộng (TEND): mỗi ô ruộng được chăm lại sau TEND_EVERY giây.
 //   Muốn rừng yên hơn nữa: TREE_WORK_K 0.2 -> 0.1; muốn bot chăm ruộng nhiều hơn: TEND_EVERY 360 -> 240.
 const TREE_WORK_K = 0.2, TREE_EDGE_MAX = 5;
+// LÕI RỪNG: ô cỏ có nhiều cây quanh (trong 24 ô) được bot ưu tiên lấp: coreK = (số cây - CORE_NT0) / CORE_NT_SPAN (0..1); trọng số trồng x (1 + CORE_BOOST*coreK), bỏ giới hạn TREE_EDGE_MAX, hệ số TREE_WORK_K tiến dần về 1. Bìa rừng (coreK = 0) nhân CORE_EDGE_K.
+const CORE_NT0 = 9, CORE_NT_SPAN = 8, CORE_BOOST = 4, CORE_EDGE_K = 0.7;
 // SỐ CÂY TRONG LÀNG (viền bấm phím \): khoảng mục tiêu [lo, hi] theo số nhà H trong khung bao làng + VT_PAD ô, kèm điều kiện phụ cho lõi (xem engine.js).
 //   lo = max(1, floor(H / VT_LO_DIV)), hi = max(lo, ceil(H / VT_HI_DIV)) (hiện H/2 - H*0.75). Cây < lo => trồng tới giữa khoảng; cây > hi => chặt tới giữa khoảng.
 const VT_ON = true;
@@ -5348,7 +5354,12 @@ class Bot {
                 const gfP = groveField[ry * GRID_W + rx];
                 let wP = (nT > 0 ? 0.35 * (1 + PLANT_CLUSTER * Math.min(nT, 14)) : 0.05) * fT * (0.04 + 1.1 * gfP) * coastSoft(rx, ry);   // chỗ đã nhiều cây thì trồng dày thêm
                 const nT8 = countAround(rx, ry, 1, TYPE_TREE);                                  // chỉ trồng ở rìa rừng
-                if (nT8 < 1 || nT8 > TREE_EDGE_MAX) wP = 0; else wP *= TREE_WORK_K;
+                // LÕI RỪNG: ô trống nằm trong rừng dày (nhiều cây quanh) được ưu tiên trồng lấp, kể cả khi đã kín 6-8 ô kề; bìa rừng bớt ưu tiên => rừng gọn lại
+                const coreK = nT8 >= 3 ? Math.max(0, Math.min(1, (nT - CORE_NT0) / CORE_NT_SPAN)) : 0;
+                if (nT8 < 1 || (nT8 > TREE_EDGE_MAX && coreK <= 0)) wP = 0;
+                else wP *= (TREE_WORK_K + (1 - TREE_WORK_K) * coreK) * (1 + CORE_BOOST * coreK) * (coreK > 0 ? 1 : CORE_EDGE_K);
+                if (wP > 0) wP *= noReK(rx, ry);                  // chỗ người chơi từng ra lệnh chặt: hạn chế trồng lại
+                if (wP > 0 && treeDrowns(rx, ry)) wP = 0;         // ô sát mép hồ mà cây chắc chắn bị nước nuốt: không trồng
                 if (footOwner[ry * GRID_W + rx]) wP = 0;         // footprint nhà đặc biệt: không trồng cây
                 if (topDenseK(ry) > 0.5) { if (nT >= SNOW_FULL_AT) wP *= 0.03; }                // 1/8 trên cùng: ngưỡng thật (<= 24) thay cho PLANT_FULL_AT + 4 = 25 (không bao giờ đạt)
                 else if (nT >= PLANT_FULL_AT) wP *= 0.2;                                         // khóm đã kín: dừng bớt để không đặc cứng
@@ -8841,9 +8852,9 @@ function seatPlace(gx, gy) {
     if (!s) {
         const q = seatSpot(gx, gy);
         beachSeats.push({ gx, gy, x: (gx + 0.5) * TILE_SIZE, y: (gy + 0.5) * TILE_SIZE, sx: Math.sign(q.fx - gx), sy: Math.sign(q.fy - gy), umb: false, col: beachSeats.length % 3, born: simClock });
-        cwpToast('⛱️ Đã đặt ghế bãi biển (bấm lần nữa để thêm ô che)', 1800); logMile('seat1', '⛱️ Bạn đặt chiếc ghế bãi biển đầu tiên');
-    } else if (!s.umb) { s.umb = true; s.born = simClock; cwpToast('⛱️ Đã thêm ô che nắng', 1500); }
-    else { beachSeats.splice(beachSeats.indexOf(s), 1); cwpToast('Đã dỡ ghế', 1200); }
+        cwpToast('⛱️ Đã đặt ghế bãi biển (bấm lần nữa để thêm ô che)', 2000); logMile('seat1', '⛱️ Bạn đặt chiếc ghế bãi biển đầu tiên');
+    } else if (!s.umb) { s.umb = true; s.born = simClock; cwpToast('⛱️ Đã thêm ô che nắng', 2000); }
+    else { beachSeats.splice(beachSeats.indexOf(s), 1); cwpToast('Đã dỡ ghế', 2000); }
 }
 function seatPickSpot(mx, my) {   // ghế còn trống gần cặp đôi nhất (ô che được ưu tiên hơn), trả về ô bờ biển tương ứng
     const T = TILE_SIZE; let best = null, bs = 1e9;
@@ -12798,7 +12809,7 @@ function pickNewGroup(gx, gy, f, v, expanding) {
     // đước không còn chọn ở đây: chỉ mọc ở hàng ô sát biển (xem shoreMangrove)
     if (waterWithin(gx, gy, WILLOW_WATER_R)) {                                                                            // liễu rủ
         let p = bandLerp(WILLOW_P, f) * wet;
-        if (waterWithin(gx, gy, WILLOW_SHORE_R)) p = Math.min(WILLOW_SHORE_CAP, p * WILLOW_SHORE_MULT);               // sát mép hồ: nhiều liễu hơn
+        if (waterWithin(gx, gy, WILLOW_SHORE_R)) p = Math.min(WILLOW_SHORE_CAP, p * WILLOW_SHORE_MULT) * WILLOW_SHORE_HALF;   // sát mép hồ: nhiều liễu hơn (nhưng chỉ còn một nửa so với trước)
         if (Math.random() < p) return 41;
     }
     if (f >= COCONUT_FROM && waterWithin(gx, gy, WILLOW_WATER_R) && nbTreeVar(gx, gy, COCONUT_VARS) === 0 && !mangroveNear(gx, gy, COCONUT_MANGROVE_GAP)) {   // dừa cạnh hồ: cùng luật liễu không dồn cục
@@ -13031,7 +13042,7 @@ function setType(c, t) {
             if (a >= 0 && b >= 0 && a < GRID_W && b < GRID_H && grid[a][b].type === TYPE_TREE) settleTree(grid[a][b]);
     }
 }
-function settleTree(c) {
+function settleTree(c, dry) {   // dry = true: chỉ tính vị trí chân cây, không ghi vào ô
     const bx = c.x * TILE_SIZE + TILE_SIZE / 2 + c.offsetX, by = c.y * TILE_SIZE + TILE_SIZE / 2 + c.offsetY + 8;
     let sx = bx, sy = by;
     for (let pass = 0; pass < 2; pass++)
@@ -13048,8 +13059,19 @@ function settleTree(c) {
             sx = Math.max(cx0 - OFF_MAX, Math.min(cx0 + OFF_MAX, sx));
             sy = Math.max(cy0 - OFF_MAX, Math.min(cy0 + OFF_MAX, sy));
         }
+    if (dry) return [sx, sy];
     c.sx = sx; c.sy = sy;
 }
+// Cây trồng ở ô cỏ này có CHẮC CHẮN bị nước nuốt không? scanStrandedStatic phá cây có chân nằm trong mặt hồ (lkF1 >= LK_TH) sau nửa ngày
+//   => ô sát mép hồ mà chân cây (sau khi đã dịch ra khỏi nước) vẫn nằm trong mặt hồ thì không cho trồng ngay từ đầu (người chơi + bot).
+const TREE_DROWN_MARGIN = 0.03;
+function treeDrowns(x, y) {
+    const c = grid[x][y];
+    if (countAround(x, y, 1, TYPE_WATER) === 0 && !lakeFieldNear(x, y)) return false;
+    const p = settleTree(c, true);
+    return inWaterPx(p[0], p[1], LK_TH - TREE_DROWN_MARGIN);
+}
+function lakeFieldNear(x, y) { return countAround(x, y, 2, TYPE_WATER) > 0; }
 function settleAllTrees() { for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) if (grid[x][y].type === TYPE_TREE) settleTree(grid[x][y]); }
 // ===== ĐẤT MỚI ĐƯỢC PHÁT TRIỂN: trước đây nhà/cây của đất mới lấn bị phá nhanh hơn tốc độ dựng, và hạn mức nhà/cây toàn cục đã bị
 //   làng/rừng cũ chiếm hết nên đất mới không được cấp phần. Ba thay đổi:
@@ -13372,12 +13394,25 @@ function treeChoppableRaw(c) {   // luật làng thuần (người chơi dùng b
     if (cm > 0 && c.x >= s.core.x0 && c.x <= s.core.x1 && c.y >= s.core.y0 && c.y <= s.core.y1 && s.coreT - s.coreChopping <= cm) return false;   // lõi đang ở mức tối thiểu
     return true;
 }
+// Ô người chơi ra lệnh chặt cây: bot hạn chế trồng lại đúng chỗ đó (ô đó ×NORE_CELL_K, 8 ô kề ×NORE_NB_K). Lưu trong CWP.ext.noRe (tối đa NORE_MAX ô, ô cũ nhất bị bỏ trước).
+const NORE_CELL_K = 0.03, NORE_NB_K = 0.4, NORE_MAX = 600;
+let noReSet = null, noReLen = -1;
+function noReArr() { const e = (CWP.ext = CWP.ext || {}); return e.noRe || (e.noRe = []); }
+function noReMark(c) { const a = noReArr(), i = c.y * GRID_W + c.x; if (a.indexOf(i) < 0) { a.push(i); if (a.length > NORE_MAX) a.shift(); } noReSet = null; }
+function noReK(x, y) {   // hệ số nhân trọng số trồng cây ở ô (x, y)
+    const a = noReArr(); if (!a.length) return 1;
+    if (!noReSet || noReLen !== a.length) { noReSet = new Set(a); noReLen = a.length; }
+    if (noReSet.has(y * GRID_W + x)) return NORE_CELL_K;
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if ((dx || dy) && noReSet.has((y + dy) * GRID_W + x + dx)) return NORE_NB_K;
+    return 1;
+}
 function vtInVillage(x, y) { return VT_ON && !!villageRectAt(x, y); }   // trong khung làng: luật trồng cây thường tắt, chỉ luật VT_* quản
 function vtPlantOK(c, relax) {
     const i = c.y * GRID_W + c.x;
     if (c.type !== TYPE_GRASS || c.isWorking || c.reserved || planId[i] || natureWait[i] || footOwner[i]) return false;   // footOwner
     if ((vtSkip.get(i) || 0) > simClock) return false;
     if (nearOpenSea(c.x, c.y, TREE_SEA_GAP) || planNear(c.x, c.y, LAKE_TREE_GAP, 0)) return false;
+    if (noReK(c.x, c.y) < 1 && (noReK(c.x, c.y) <= NORE_CELL_K || Math.random() < 0.6)) return false;   // chỗ người chơi vừa ra lệnh chặt: không trồng lại
     if (countAround(c.x, c.y, 1, TYPE_WATER) > 0 || countAround(c.x, c.y, 2, TYPE_FIELD) >= 2) return false;
     if (inSnowBiome(c.y) && snowFull()) return false;
     return relax || countAround(c.x, c.y, 1, TYPE_HOUSE) === 0;   // lượt đầu: chừa ô sát nhà (sân thoáng)
@@ -13401,6 +13436,7 @@ function treeDebtState(c) {   // 0 = loại hẳn (có cây / nhà / hồ / ru�
     if (c.type !== TYPE_GRASS || DMG[c.y * GRID_W + c.x] || footOwner[c.y * GRID_W + c.x]) return 0;
     if (nearOpenSea(c.x, c.y, TREE_SEA_GAP) || planNear(c.x, c.y, LAKE_TREE_GAP, 0) || vtInVillage(c.x, c.y)) return 0;
     if (countAround(c.x, c.y, 1, TYPE_WATER) > 0 || countAround(c.x, c.y, 2, TYPE_FIELD) >= 2) return 0;
+    if (noReK(c.x, c.y) <= NORE_CELL_K) return 0;
     if (inSnowBiome(c.y) && snowFull()) return 0;
     const i = c.y * GRID_W + c.x;
     return (c.isWorking || c.reserved || planId[i] || natureWait[i]) ? 1 : 2;
@@ -14168,16 +14204,13 @@ function keepLargestLand() {
     for (let i = 0; i < N_CELLS; i++) if (landFlag[i] && comp[i] !== best) landFlag[i] = 0;
 }
 function smoothM(m, passes) {              // ô là đất khi >= 5/9 ô quanh nó (gồm chính nó) là đất => bo tròn mũi/khe nhỏ
-    let cur = m;
+    let cur = m; const W = GRID_W, H = GRID_H, row = new Uint8Array(N_CELLS);
     for (let k = 0; k < passes; k++) {
         const o = new Uint8Array(N_CELLS);
-        for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
-            let n = 0;
-            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-                const a = x + dx, b = y + dy;
-                if (a >= 0 && b >= 0 && a < GRID_W && b < GRID_H && cur[b * GRID_W + a]) n++;
-            }
-            o[y * GRID_W + x] = n >= 5 ? 1 : 0;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; row[i] = (x > 0 ? cur[i - 1] : 0) + cur[i] + (x < W - 1 ? cur[i + 1] : 0); }   // tổng 3 ô ngang
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const i = y * W + x, n = row[i] + (y > 0 ? row[i - W] : 0) + (y < H - 1 ? row[i + W] : 0);
+            o[i] = n >= 5 ? 1 : 0;
         }
         cur = o;
     }
@@ -14279,9 +14312,69 @@ function carveInlet(al) {
     }
     return false;
 }
+// ---- LUẬT BỜ KHÔNG QUÁ THẲNG: sau khi đảo mở rộng tối đa, không có đoạn bờ nào thẳng liên tục quá COAST_STRAIGHT_FRAC (1/3) chiều dài cạnh đó ----
+//   Đo theo 4 cạnh (trên / dưới / trái / phải) của hộp bao đảo: với mỗi cạnh lấy "đường bờ" p(t) (mép đất ngoài cùng ở từng cột / hàng).
+//   Một cửa sổ dài L*FRAC mà độ lệch của bờ khỏi đường thẳng khớp nhất (cao - thấp, sau khi trừ đường thẳng) < COAST_STRAIGHT_D ô => đoạn đó "thẳng" (sóng nhẹ không tính).
+//   Đoạn thẳng nhất được khoét thêm 1-2 vịnh tròn (rồi bo mịn lại); lặp tới khi hết đoạn thẳng (tối đa COAST_STRAIGHT_ITER lượt).
+function coastProfile(al, side) {
+    const horiz = side === 'top' || side === 'bottom', A = horiz ? GRID_W : GRID_H, B = horiz ? GRID_H : GRID_W, p = new Int16Array(A).fill(-1);
+    for (let t = 0; t < A; t++) {
+        if (side === 'top' || side === 'left') { for (let u = 0; u < B; u++) if (al[horiz ? u * GRID_W + t : t * GRID_W + u]) { p[t] = u; break; } }
+        else { for (let u = B - 1; u >= 0; u--) if (al[horiz ? u * GRID_W + t : t * GRID_W + u]) { p[t] = u; break; } }
+    }
+    return p;
+}
+function coastStraightScan(al) {   // trả về cửa sổ thẳng nhất { side, s, W, r, p, horiz } (r = độ lệch khỏi đường thẳng) hoặc null nếu mọi cạnh đều đạt
+    let worst = null;
+    for (const side of ['top', 'bottom', 'left', 'right']) {
+        const p = coastProfile(al, side);
+        let t0 = 0, t1 = p.length - 1; while (t0 < t1 && p[t0] < 0) t0++; while (t1 > t0 && p[t1] < 0) t1--;
+        const L = t1 - t0 + 1, W = Math.floor(L * COAST_STRAIGHT_FRAC); if (W < 8) continue;
+        for (let s = t0; s + W <= t1 + 1; s += 2) {
+            let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0, bad = false;
+            for (let k = 0; k < W; k++) { const y = p[s + k]; if (y < 0) { bad = true; break; } n++; sx += k; sy += y; sxx += k * k; sxy += k * y; }
+            if (bad) continue;
+            const den = n * sxx - sx * sx, m = den ? (n * sxy - sx * sy) / den : 0, b0 = (sy - m * sx) / n;
+            let lo = 1e9, hi = -1e9; for (let k = 0; k < W; k++) { const r = p[s + k] - (b0 + m * k); if (r < lo) lo = r; if (r > hi) hi = r; }
+            const r = hi - lo;
+            if (r < COAST_STRAIGHT_D && (!worst || r < worst.r)) worst = { side, s, W, r, p, horiz: side === 'top' || side === 'bottom' };
+        }
+    }
+    return worst;
+}
+function capeCount(al) { let n = 0; for (let i = 0; i < N_CELLS; i++) n += al[i]; return n; }
+function coastBreakStraight(al, outFrame) {
+    for (let it = 0; it < COAST_STRAIGHT_ITER; it++) {
+        const w = coastStraightScan(al); if (!w) break;
+        const nb = 1 + (w.W > 40 ? 1 : 0);
+        for (let k = 0; k < nb; k++) {
+            const t = Math.round(w.s + w.W * (nb === 1 ? 0.5 : (k + 0.5) / nb) + (Math.random() - 0.5) * w.W * 0.12), r = COAST_STRAIGHT_D + 0.5 + Math.random() * 2.5, c = Math.random() * 1.5;
+            const e = w.p[Math.max(0, Math.min(w.p.length - 1, t))], dir = (w.side === 'top' || w.side === 'left') ? 1 : -1, u = e + dir * c;   // tâm vịnh nằm hơi sâu trong đất
+            if (Math.random() < COAST_CAPE_P) {   // thử BỒI mũi đất cong ra ngoài trước (nếu còn chỗ trong giới hạn bản đồ); không bồi được thì khoét vịnh
+                const before = capeCount(al);
+                for (let q = 0; q < 3; q++) {
+                    const tq = t + (q - 1) * r * 0.9, rq = (q === 1 ? 1 : 0.8) * (r + 1.5), ec = w.p[Math.max(0, Math.min(w.p.length - 1, Math.round(tq)))] - dir * rq * 0.15;
+                    const mk = w.horiz ? [tq + 0.5, ec + 0.5] : [ec + 0.5, tq + 0.5];
+                    for (let x = Math.max(0, Math.floor(mk[0] - rq)); x <= Math.min(GRID_W - 1, Math.ceil(mk[0] + rq)); x++) for (let y = Math.max(0, Math.floor(mk[1] - rq)); y <= Math.min(GRID_H - 1, Math.ceil(mk[1] + rq)); y++)
+                        if (Math.hypot(x + 0.5 - mk[0], y + 0.5 - mk[1]) <= rq && !outFrame(x, y)) al[y * GRID_W + x] = 1;
+                }
+                if (capeCount(al) - before >= r * 4) continue;   // đã bồi được đáng kể
+            }
+            const nd = 2 + Math.floor(Math.random() * 2);   // vịnh thoải: 2-3 đĩa chồng nhau dọc theo bờ => rộng gấp ~3 lần sâu, không thành "lỗ tròn"
+            for (let q = 0; q < nd; q++) {
+                const tq = t + (q - (nd - 1) / 2) * r * 0.85, rq = r * (q === Math.floor(nd / 2) ? 1 : 0.8 + Math.random() * 0.15);
+                if (w.horiz) carveDisc(al, tq + 0.5, u + 0.5, rq); else carveDisc(al, u + 0.5, tq + 0.5, rq);
+            }
+        }
+        al = smoothM(al, 1);   // bo mịn mép vịnh vừa khoét (smoothM trả về mảng mới)
+        for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) if (outFrame(x, y)) al[y * GRID_W + x] = 0;
+    }
+    return al;
+}
 function buildSeaKeep() {
     const cx = GRID_W / 2, cy = GRID_H / 2, sd = landSeed;
-    const outFrame = (x, y) => Math.min(x - LAND_OX, LAND_OX + LAND_W0 - 1 - x, y - LAND_OY, LAND_OY + LAND_H0 - 1 - y) < SEA_MARGIN;   // ngoài khung đất cũ = luôn là biển (phần biển nới thêm)
+    const frameLim = COAST_STRAIGHT_ON ? SEA_MARGIN - SOFT_FRAME_OUT : SEA_MARGIN;   // bờ mềm: đất được lấn ra ngoài khung cũ tối đa SOFT_FRAME_OUT ô (biển nới thêm ở rìa bản đồ)
+    const outFrame = (x, y) => Math.min(x - LAND_OX, LAND_OX + LAND_W0 - 1 - x, y - LAND_OY, LAND_OY + LAND_H0 - 1 - y) < frameLim;   // ngoài khung đất cũ = luôn là biển (phần biển nới thêm)
     let al = new Uint8Array(N_CELLS);
     for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
         if (outFrame(x, y)) continue;
@@ -14295,8 +14388,19 @@ function buildSeaKeep() {
     for (let k = 0; k < nIn; k++) carveInlet(al);
     al = dilateM(erodeM(al, 1), 1);                 // vịnh khoét xong có thể để lại dải đất mỏng
     al = smoothM(al, COAST_SMOOTH);                 // bo tròn bờ
+    // khung đất cũ trước đây cắt đảo bằng đường thẳng tắp => bờ "mềm": mép khung lùi vào theo sóng chậm (0..SOFT_FRAME_A ô, bước sóng ~45 ô) rồi bo tròn lại
+    const sfOut = !COAST_STRAIGHT_ON ? outFrame : (x, y) => {
+        const dl = x - LAND_OX, dr = LAND_OX + LAND_W0 - 1 - x, dt = y - LAND_OY, db = LAND_OY + LAND_H0 - 1 - y;
+        const ins = (v, seed) => -SOFT_FRAME_OUT + (SOFT_FRAME_OUT + SOFT_FRAME_A) * smoothstep(0.34, 0.64, fbm(v, 0.5, sd + seed, 2));   // -OUT (lấn ra) .. +A (lùi vào)
+        return dt < SEA_MARGIN + ins(x * 0.022, 211) || db < SEA_MARGIN + ins(x * 0.022, 223) || dl < SEA_MARGIN + ins(y * 0.03, 237) || dr < SEA_MARGIN + ins(y * 0.03, 251);
+    };
     for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++)
-        if (outFrame(x, y)) al[y * GRID_W + x] = 0;
+        if (sfOut(x, y)) al[y * GRID_W + x] = 0;
+    if (COAST_STRAIGHT_ON) {
+        al = smoothM(al, 2);
+        for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) if (outFrame(x, y)) al[y * GRID_W + x] = 0;
+        al = coastBreakStraight(al, outFrame);
+    }   // không để đoạn bờ thẳng chạy liên tục quá 1/3 chiều dài cạnh
     finalizeKeep(al);
 }
 // Hồ tự nhiên nằm gần biển: có xác suất được nối ra biển bằng một eo rộng ~3 ô, cả vùng hồ thành biển luôn
@@ -15122,7 +15226,7 @@ const cwStarBase = () => (typeof cwStar.base === 'number' ? cwStar.base : CW_STA
 const cwStarAdj = raw => { const B = cwStarBase(); return Math.max(0, Math.min(100, (raw - B) / (100 - B) * 100)); };
 function cwStarStr(half) {   // half = số nửa sao 0..10; sao trọn / nửa sao là ảnh SVG tự vẽ (class cws, định nghĩa trong <style> đầu trang), thay cho ⭐ và ✨
 if (half <= 0) return '☆';
-return '<i class="cws"></i>'.repeat(Math.floor(half / 2)) + (half % 2 === 1 ? '<i class="cws h"></i>' : '');
+return (half % 2 === 1 ? '<i class="cws h"></i>' : '') + '<i class="cws"></i>'.repeat(Math.floor(half / 2));   // nửa sao nằm bên TRÁI, sao đầy dồn sang phải
 }
 function cwStarNotice(nh, bonus) {   // thông báo hòn đảo lên cấp ở phía trên, chung hàng đợi với thông báo loài mới (mèo, thỏ, cáo...). bonus: undefined = không có tim thưởng; số tim thưởng (đã bị trần cắt)
 speciesQueue.push({ html: cwStarStr(nh) + ' Hòn đảo lên cấp: <b>' + CW_STAR_NAMES[nh] + '</b>!' + (bonus === undefined ? '' : bonus > 0 ? ' · +' + (Math.round(bonus * 2) / 2).toString().replace('.5', '½').replace(/^0½$/, '½') + ' ❤️' : ' · tim đã đầy') });
@@ -15782,7 +15886,7 @@ function festStart(kind, j) {
     const T = TILE_SIZE, x = (site.gx + 0.5) * T, y = (site.gy + 0.5) * T;
     const want = Math.min(FEST_MAX, Math.ceil(FEST_FRAC * bots.length));   // suất người lớn + người già; trẻ em mời riêng
     const dist = o => Math.hypot(o.x - x, o.y - y);
-    const ad = bots.filter(b => !b.gone && !b.dying && !b.boat && !b.job && !b.homing && b.state !== 'SLEEP' && (b.pop === undefined || b.pop >= 1));
+    const ad = bots.filter(b => !b.gone && !b.dying && !b.boat && !b.job && !b.homing && !b.isWisher && b.state !== 'SLEEP' && (b.pop === undefined || b.pop >= 1));
     const kc = kids.filter(k => !k.gone && k.state !== 'SLEEP' && !(k.state === 'GO' && k.next === 'SLEEP') && k.pop >= 1 && !k.dnc && !k.fest && !dnSleepy(k.bedJ, k.wakeJ, true) && walkClear(k.x, k.y, x, y));
     const cand = ad.sort((a, b) => dist(a) - dist(b)).slice(0, want);              // người lớn / già gần nhất cho đủ 80% tối đa 30
     const kk = kc.sort((a, b) => dist(a) - dist(b)).slice(0, FEST_KIDS_MAX);       // trẻ em: mời hết các bé đi tới được (tối đa 24)
@@ -15828,7 +15932,7 @@ function festUpdate(F, dt) {
             if (here < 3) { festEnd(F); return; }
             F.ph = 'on'; F.t = 0; F.n = here;
             try { if (window.cwJingle && gameSpeed < 10) window.cwJingle(F.kind); } catch (e) { }   // đoạn nhạc hiệu 3-5 giây khi lễ hội bắt đầu (04_audio)
-            if (F.kind === 'moon') { logMile('moon' + F.j, '🏮 Tết Trung thu lần thứ ' + (F.j + 1) + ': ' + here + ' người rước đèn'); try { cwpToast('🏮 Tết Trung thu! Các bé rước đèn ông sao quanh làng', 3800); } catch (e) { } return; }
+            if (F.kind === 'moon') { logMile('moon' + F.j, '🏮 Tết Trung thu lần thứ ' + (F.j + 1) + ': ' + here + ' người rước đèn'); try { cwpToast('🏮 Tết Trung thu! Các bé rước đèn ông sao quanh làng', 3000); } catch (e) { } return; }
             const n = F.kind === 'winter' ? Math.floor(F.j / 2) + 1 : Math.floor((F.j - 1) / 2) + 1;
             logMile('fest' + F.j, F.kind === 'winter' ? '🔥 Đêm lửa trại mùa đông lần thứ ' + n + ': ' + here + ' người quây quần' : '🌸 Hội hoa anh đào lần thứ ' + n + ': ' + here + ' người cùng dự');
         }
@@ -16074,7 +16178,7 @@ function showNextSpecies() {
     const el = document.getElementById('species-toast');
     if (!el || !speciesQueue.length) { speciesBusy = false; if (el) el.classList.remove('show'); return; }
     speciesBusy = true; const _m = speciesQueue.shift(); if (_m && _m.html) el.innerHTML = _m.html; else el.textContent = _m; el.classList.add('show');   // mục dạng { html } dùng cho thông báo lên cấp đảo (có ảnh sao)
-    setTimeout(() => { el.classList.remove('show'); setTimeout(showNextSpecies, 700); }, 4500);
+    setTimeout(() => { el.classList.remove('show'); setTimeout(showNextSpecies, 700); }, 5000);
 }
 function noteSpecies(kind) {
     if (kind === 'fawn') kind = 'doe';
@@ -16819,7 +16923,7 @@ function evtEnd() {
 }
 // Thông báo xen kẽ trong lúc bão / mưa lớn: xoay vòng mỗi EVT_MSG_MS ms (giờ thật) giữa tình hình chung và số thiệt hại đến giờ
 // Mỗi thông báo hiện EVT_MSG_SHOW ms rồi tắt hẳn EVT_MSG_GAP ms mới tới thông báo kế (trước: đổi liền nhau mỗi 6s nên dồn dập). Dòng chữ chốt lúc bắt đầu chu kỳ => không đổi chữ giữa chừng khi số liệu thay đổi.
-const EVT_MSG_SHOW = 4500, EVT_MSG_GAP = 4500, EVT_MSG_MS = EVT_MSG_SHOW + EVT_MSG_GAP;
+const EVT_MSG_SHOW = 5000, EVT_MSG_GAP = 5000, EVT_MSG_MS = EVT_MSG_SHOW + EVT_MSG_GAP;
 function evtRotate(lines) {
     const el = performance.now() - EVT.msgAt, cyc = Math.floor(el / EVT_MSG_MS);
     if (EVT.msgCur == null || cyc !== EVT.msgCyc) { if (EVT.msgCur != null) EVT.msgI++; EVT.msgCyc = cyc; EVT.msgCur = lines[EVT.msgI % lines.length]; }
@@ -17392,7 +17496,7 @@ function gameLoop() {
     const SHOT_ROOTS = ['ui-layer', 'cw-star', 'cw-hearts', 'ord-p', 'cwp-bar', 'cwp-tbtn'];   // các khối giao diện vẽ vào ảnh (khối ẩn thì tự bỏ qua)
     const DIR_KEY = 'shotdir', imgCache = new Map();
     let busy = false, lastT = -1e9, declined = false;
-    const say = (m, ms) => { try { if (typeof cwpToast === 'function') cwpToast(m, ms || 4800); else console.log(m); } catch (e) { } };
+    const say = (m, ms) => { try { if (typeof cwpToast === 'function') cwpToast(m, ms || 3000); else console.log(m); } catch (e) { } };
     const idbGet = () => typeof cwIdbReq === 'function' ? cwIdbReq('readonly', st => st.get(DIR_KEY)) : Promise.resolve(null);
     const idbPut = (h) => typeof cwIdbReq === 'function' ? cwIdbReq('readwrite', st => st.put(h, DIR_KEY)) : Promise.resolve();
     const idbDel = () => typeof cwIdbReq === 'function' ? cwIdbReq('readwrite', st => st.delete(DIR_KEY)) : Promise.resolve();
@@ -17421,7 +17525,7 @@ function gameLoop() {
             const big = hh.classList.contains('x'), f = hh.querySelector('.f'), p = f ? (+f.dataset.p || 0) : 0;
             c.save(); c.translate(x + ox, y + oy); c.scale(sc, sc);
             c.fillStyle = 'rgba(40,28,30,.5)'; c.fill(P); c.lineWidth = 1.7; c.strokeStyle = big ? '#ffc36b' : 'rgba(255,255,255,.9)'; c.stroke(P);
-            if (p > 0) { c.save(); c.beginPath(); c.rect(-2, 22 * (1 - p / 100), 30, 24); c.clip(); c.fillStyle = c.strokeStyle = big ? '#ff9d3c' : '#ff4d6a'; c.fill(P); c.stroke(P); c.restore(); }
+            if (p > 0) { c.save(); c.beginPath(); c.rect(-2 + 28 * (1 - p / 100), -2, 30, 28); c.clip(); c.fillStyle = c.strokeStyle = big ? '#ff9d3c' : '#ff4d6a'; c.fill(P); c.stroke(P); c.restore(); }
             c.restore();
             const nEl = hh.querySelector('.n');
             if (nEl && nEl.textContent) {
@@ -17487,7 +17591,7 @@ function gameLoop() {
             if (!canAsk) return { dir: null, why: 'needask' };
         }
         if (!canAsk) return { dir: null, why: 'needask' };
-        say('📁 Chọn thư mục để lưu ảnh (nên chọn Pictures hoặc Pictures\\CozyWorld). Chỉ hỏi 1 lần.', 6000);
+        say('📁 Chọn thư mục để lưu ảnh (nên chọn Pictures hoặc Pictures\\CozyWorld). Chỉ hỏi 1 lần.', 3000);
         try { h = await window.showDirectoryPicker({ id: 'cozyworld-shots', mode: 'readwrite', startIn: 'pictures' }); } catch (e) { declined = true; return { dir: null, why: 'declined' }; }   // hủy / trình duyệt chặn thư mục hệ thống
         try { await idbPut(h); } catch (e) { }
         return { dir: h };
@@ -17505,7 +17609,7 @@ function gameLoop() {
             const d = new Date(), p = n => String(n).padStart(2, '0'), name = 'CozyWorld_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.png';
             const res = await dirP; flash();
             if (res.dir) {
-                try { await writeFile(res.dir, name, blob); say('📸 Đã lưu ảnh vào thư mục "' + res.dir.name + '": ' + name, 5200); return; }
+                try { await writeFile(res.dir, name, blob); say('📸 Đã lưu ảnh vào thư mục "' + res.dir.name + '": ' + name, 3000); return; }
                 catch (e) { console.warn('[chụp ảnh] không ghi được vào thư mục đã chọn:', e); try { await idbDel(); } catch (e2) { } }   // thư mục bị xóa / mất quyền: quên đi, lần sau hỏi lại
             }
             download(blob, name);
@@ -17919,6 +18023,7 @@ function cwpCheckRaw(act, gx, gy) {
         const nT8 = countAround(gx, gy, 1, TYPE_TREE);   // người chơi được trồng cây ngay trong làng (bot thì không) và không cần cây kề bên (bỏ luật "chỉ trồng ở rìa rừng")
         if (nT8 > TREE_EDGE_MAX) return no('Chỗ này đã quá dày cây');
         if (planNear(gx, gy, LAKE_TREE_GAP, 0)) return no('Sát vùng hồ tự nhiên sắp hiện');
+        if (treeDrowns(gx, gy)) return no('Sát mép hồ quá');
         if (!PLAYER_TREE_FREE && inSnowBiome(gy) && snowFull()) return no('Vùng tuyết đã đủ cây');
         const whyT = cwpFundWhy(TYPE_TREE, z, 'cây');   // bot 21%, người chơi thêm 1% (22%)
         if (whyT) return no(whyT);
@@ -18076,7 +18181,7 @@ function cwpLookMode(quiet) {
     CWP.tool = 'walk'; CWP.prev = null; try { ordArea = null; } catch (e) { }
     if (cwpBarEl) cwpBarEl.querySelectorAll('.cwp-tb').forEach(b => b.classList.remove('on'));
     cwpTbtnSync(); try { ordToolSync(); } catch (e) { }
-    if (!quiet) cwpToast('👀 Chế độ ngắm · chạm nút tròn để chọn lại công cụ', 2200);
+    if (!quiet) cwpToast('👀 Chế độ ngắm · chạm nút tròn để chọn lại công cụ', 2000);
 }
 function cwpSetTouchUI(on, persist) {
     CWP.touchUI = !!on;
@@ -18294,10 +18399,10 @@ let cwHeartsEl = null, cwHeartsTipEl = null, cwHeartsTipOn = false;
 function cwHeartsInit() {
     if (cwHeartsEl) return;
     const st = document.createElement('style');
-    st.textContent = '#cw-hearts{position:fixed;z-index:6;top:calc(46px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));display:grid;grid-template-columns:repeat(5,17px);gap:3px 2px;padding:3px 4px;cursor:help;-webkit-user-select:none;user-select:none;touch-action:manipulation;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}' +
+    st.textContent = '#cw-hearts{position:fixed;z-index:6;top:calc(46px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));display:grid;direction:rtl;grid-template-columns:repeat(5,17px);gap:3px 2px;padding:3px 4px;cursor:help;-webkit-user-select:none;user-select:none;touch-action:manipulation;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}' +
         '#cw-hearts .hh{position:relative;width:17px;height:15px;flex:none}#cw-hearts .hh svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}' +
         '#cw-hearts .hh .b path{fill:rgba(40,28,30,.38);stroke:rgba(255,255,255,.9);stroke-width:2;stroke-linejoin:round}' +
-        '#cw-hearts .hh .f{clip-path:inset(0 100% 0 0);transition:clip-path .5s linear}#cw-hearts .hh .f path{fill:#ff4d6a;stroke:#ff4d6a;stroke-width:2;stroke-linejoin:round}' +
+        '#cw-hearts .hh .f{clip-path:inset(0 0 0 100%);transition:clip-path .5s linear}#cw-hearts .hh .f path{fill:#ff4d6a;stroke:#ff4d6a;stroke-width:2;stroke-linejoin:round}' +
         '#cw-hearts.full .hh.cap{animation:cwhPulse 1.6s ease-in-out infinite}' +
         '#cw-hearts.pay{animation:cwhPay .35s ease-out}#cw-hearts.gain{animation:cwhGain .9s ease-out}#cw-hearts.no{animation:cwhNo .38s ease-out}' +
         '#cw-hearts .fl{position:absolute;right:2px;top:100%;margin-top:1px;font:800 13px/1 "Segoe UI",Tahoma,sans-serif;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.65);animation:cwhFl 1.1s ease-out forwards}' +
@@ -18318,7 +18423,7 @@ function cwHeartsInit() {
     cwHeartsTipEl = document.createElement('div'); cwHeartsTipEl.id = 'cw-htip'; document.body.appendChild(cwHeartsTipEl);
     cwHeartsEl.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') cwHeartsTip(true); });
     cwHeartsEl.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') cwHeartsTip(false); });
-    cwHeartsEl.addEventListener('click', () => { if (cwHeartsTipOn) return; try { cwpToast(cwHeartsInfo(true), 5200); } catch (e) { } });   // chuột đã có bảng rê; chạm thì hiện toast
+    cwHeartsEl.addEventListener('click', () => { if (cwHeartsTipOn) return; try { cwpToast(cwHeartsInfo(true), 3000); } catch (e) { } });   // chuột đã có bảng rê; chạm thì hiện toast
     document.body.appendChild(cwHeartsEl);
     cwHeartsSync();
 }
@@ -18364,7 +18469,7 @@ function cwHeartsSync() {
         if (i >= 5) { const show = row2On; if ((el.style.display === 'none') === show) el.style.display = show ? '' : 'none'; if (!show) continue; }   // hàng dưới trống hẳn (<=5 tim) => ẩn luôn, đỡ rối
         if (el.classList.contains('cap') !== (i === HEART_MAX - 1)) el.classList.toggle('cap', i === HEART_MAX - 1);
         const p = Math.round(clamp(H - i) * 100), f = el.querySelector('.f');
-        if (f && f.dataset.p !== String(p)) { f.dataset.p = p; f.style.clipPath = 'inset(0 ' + (100 - p) + '% 0 0)'; }
+        if (f && f.dataset.p !== String(p)) { f.dataset.p = p; f.style.clipPath = 'inset(0 0 0 ' + (100 - p) + '%)'; }
     }
     cwHeartsEl.classList.toggle('full', H >= HEART_MAX - 1e-9);
     if (cwHeartsTipOn) {   // bảng đang mở: chỉ đổi chữ khi khác (không dựng lại phần tử => không chớp)
@@ -18389,7 +18494,7 @@ function cwpToolSync() {
     if (!cwpBarEl) return;
     for (const b of cwpBarEl.querySelectorAll('.cwp-tb')) b.classList.toggle('off', !cwpToolAvail(b.dataset.t) || !cwpToolAfford(b.dataset.t));
     const okSeat = seatToolOK();   // Ghế biển nằm trong bảng Trang trí (phím 5), khoá cho tới khi đảo mở rộng hoàn toàn
-    if (okSeat && !mileDone.has('seatUnlock')) { logMile('seatUnlock', '⛱️ Đảo mở rộng hoàn toàn: mở khoá Ghế biển'); cwpToast('⛱️ Đảo đã mở rộng hoàn toàn: mở khoá ⛱️ Ghế biển (trong 🏮 Trang trí, phím 5)', 4500); }
+    if (okSeat && !mileDone.has('seatUnlock')) { logMile('seatUnlock', '⛱️ Đảo mở rộng hoàn toàn: mở khoá Ghế biển'); cwpToast('⛱️ Đảo đã mở rộng hoàn toàn: mở khoá ⛱️ Ghế biển (trong 🏮 Trang trí, phím 5)', 3000); }
     const cap = cwpBarEl.querySelector('.cwp-cap'), capOn = !cwpKeysKnown && simClock < CWP_CAP_SHOW;   // dòng chú thích phím: tới khi biết dùng, tối đa 10 phút đầu ván
     if (cap && (cap.style.display !== 'none') !== capOn) { cap.style.display = capOn ? '' : 'none'; cwpBarEl.classList.toggle('nocap', !capOn); }
 }
@@ -18447,7 +18552,7 @@ CWP.ordStat = { placed: 0, done: 0, cancel: 0 };   // thống kê lệnh bạn g
 //   Trừ lúc tạo lệnh (orderCreate), hoàn lại khi hủy nếu bot CHƯA bắt đầu làm (orderCancel). Hồi: HEART_RATE tim / giây game (simClock), tính lười theo đồng hồ => tua x2..x40 và tua đêm hồi y như nhau.
 //   Sổ cái: spent − refunded − used = tổng cost các lệnh còn sống đã trả (o.paid). cwHeartAudit() kiểm lại, orderTick tự cảnh báo nếu lệch.
 //   TRẦN TIM luôn là HEART_MAX (10) ngay từ đầu game (như trần sao luôn là 10) — chỉ SỐ TIM BAN ĐẦU (HEART_START) là 3, không phải trần thấp rồi tăng dần.
-const HEART_MAX = 10, HEART_START = 3, HEART_RATE = 0.5 / 60, HEART_EPS = 1e-6;   // trần cứng = số tim vẽ · tim lúc mở ván / bản lưu cũ · +½ tim mỗi 60 giây game
+const HEART_MAX = 10, HEART_START = 1.5, HEART_RATE = 0.5 / 60, HEART_EPS = 1e-6;   // trần cứng = số tim vẽ · tim lúc mở ván / bản lưu cũ · +½ tim mỗi 60 giây game
 const HEART_COST = { build: 1, pond: 1, plant: 0.5, chop: 0.5, farm: 0.5, demo: 0.5, fill: 0.5, dig: 0.5, tend: 0, fix: 0, seat: 0 };
 function cwHeartsNew() { return { h: HEART_START, t: simClock, spent: 0, refunded: 0, used: 0, gained: 0, lost: 0 }; }
 function cwHeartCap() { return HEART_MAX; }   // trần cố định; không tăng theo đất / cấp nữa
@@ -18555,15 +18660,16 @@ function ordNotify(b, o) {   // bot vừa nhận lệnh
 }
 function ordOnDone(o, c) {   // lệnh hoàn thành thật (đã qua kiểm ORDER_OK)
     const S = CWP.ordStat, kind = o.act; S.done++;
+    if (kind === 'chop') { try { noReMark(c); } catch (e) { } }   // bot hạn chế trồng lại đúng chỗ người chơi vừa bắt chặt
     const gk = { plant: 'tree', build: 'house', farm: 'field', pond: 'pond', dig: 'pondx' }[kind], T = TILE_SIZE;
     if (gk) { CWP.made.push({ k: gk, c, ph: Math.random() * 6.28, t0: performance.now() / 1000 }); if (CWP.made.length > 300) CWP.made.splice(0, CWP.made.length - 300); }
     ordSfxNear((c.x + 0.5) * T, (c.y + 0.5) * T, kind === 'plant' ? 'plant' : kind === 'chop' ? 'timber' : kind === 'demo' ? 'demo' : 'done');
     const n = CWP.stats ? CWP.stats[kind] : 0, K = CWP_STAT_TXT[kind];
     if (ORD_MILES.includes(S.done)) {
         const t = S.done === 1 ? 'Lệnh đầu tiên đã hoàn thành' : 'Đã hoàn thành ' + S.done + ' lệnh bạn giao';
-        cwpToast('📋 ' + t, 2600); try { logMile('od' + S.done, '📋 ' + t); } catch (e) { }
+        cwpToast('📋 ' + t, 2000); try { logMile('od' + S.done, '📋 ' + t); } catch (e) { }
     } else if (K && ORD_MILES.includes(n)) {   // mốc theo từng loại việc (chỉ hiện khi không trùng mốc tổng)
-        cwpToast(K[0] + ' ' + K[1](n), 2600); try { logMile('od_' + kind + n, '📋 ' + K[1](n)); } catch (e) { }
+        cwpToast(K[0] + ' ' + K[1](n), 2000); try { logMile('od_' + kind + n, '📋 ' + K[1](n)); } catch (e) { }
     }
 }
 function ordDrawBubbles() {   // số thứ tự lệnh trên đầu bot đang làm (cùng kiểu số ở góc ô việc), không còn bong bóng "!" / đường kẻ
@@ -18581,9 +18687,9 @@ function ordDrawBubbles() {   // số thứ tự lệnh trên đầu bot đang l
     ctx.restore();
 }
 // PHẢN HỒI KHI KHÔNG LÀM ĐƯỢC: thông báo + tiếng nhỏ (04_audio: cwUiDeny). 'noheart' = thiếu tim (tim rung) · 'deny' = ô không hợp lệ (ô đỏ) / việc không làm được
-function cwNoHeartMsg(cost) { return '💔 Chưa đủ tim: cần ' + cwHeartFmt(cost) + ' ❤️, đang có ' + cwHeartFmt(Math.floor(cwHeartsGet() * 2 + 1e-9) / 2) + ' ❤️ · tim hồi +½ mỗi phút'; }
+function cwNoHeartMsg(cost) { return '💔 Chưa đủ tim: cần ' + cwHeartFmt(cost) + ' ❤️, đang có ' + cwHeartFmt(Math.floor(cwHeartsGet() * 2 + 1e-9) / 2) + ' ❤️'; }
 function cwDeny(kind, msg) {
-    if (msg) cwpToast(msg, kind === 'noheart' ? 2800 : 1800);
+    if (msg) cwpToast(msg, kind === 'noheart' ? 3000 : 2000);
     try { if (window.cwUiDeny) window.cwUiDeny(kind); } catch (e) { }
     if (kind === 'noheart') cwHeartsShake();
 }
@@ -19099,7 +19205,7 @@ function cwpToast(msg, ms) {
         document.body.appendChild(cwpToastEl);
     }
     cwpToastEl.textContent = msg; cwpToastEl.style.opacity = '1';
-    clearTimeout(cwpToastT); cwpToastT = setTimeout(() => { cwpToastEl.style.opacity = '0'; }, ms || 1400);
+    clearTimeout(cwpToastT); cwpToastT = setTimeout(() => { cwpToastEl.style.opacity = '0'; }, ms || 2000);
 }
 // vòng sáng dưới chân (vẽ trước bóng) + nhãn tên trên đầu (kích thước không đổi theo zoom); gọi từ drawBot
 // Mẫu nhà chọn được: mọi kiểu thường (bỏ nhà đặc biệt: kho thóc / nhà thờ / tháp đồng hồ / cối xay do làng tự xây). Nhóm theo kiểu, mỗi kiểu có nhiều màu.
@@ -19604,7 +19710,7 @@ async function cwSaveNow(why) {
         return true;
     } catch (e) {
         console.warn('[G18] không lưu được game:', e);
-        if (!cwSaveWarned) { cwSaveWarned = true; try { cwpToast('⚠️ Không lưu được game (hết bộ nhớ trình duyệt?)', 4000); } catch (e2) { } }
+        if (!cwSaveWarned) { cwSaveWarned = true; try { cwpToast('⚠️ Không lưu được game (hết bộ nhớ trình duyệt?)', 3000); } catch (e2) { } }
         return false;
     } finally { cwSaveBusy = false; }
 }
@@ -19723,7 +19829,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         if (e.repeat || window.__cwLoading !== false) return;
         gameSpeed = (gameSpeed === tgt) ? spBase : tgt;
         spSyncUI();
-        try { cwpToast(gameSpeed > 2 ? '⚡ Tua x' + gameSpeed + (gameSpeed >= 10 ? ' (tạm tắt thời tiết, ngày đêm)' : '') : '▶ Tốc độ thường (x' + gameSpeed + ')', 1400); } catch (er) { }
+        try { cwpToast(gameSpeed > 2 ? '⚡ Tua x' + gameSpeed + (gameSpeed >= 10 ? ' (tạm tắt thời tiết, ngày đêm)' : '') : '▶ Tốc độ thường (x' + gameSpeed + ')', 2000); } catch (er) { }
     }, true);
 
     // ---------- (2) Hướng dẫn người mới ----------
@@ -20204,7 +20310,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
             if (cur && typeof cwHeartsGet === 'function' && cwHeartsGet() <= (typeof HEART_EPS === 'number' ? HEART_EPS : 1e-6)) {
                 S.mis[cur.id].state = 'skip'; if (!S.order.includes(cur.id)) S.order.push(cur.id);
                 S.spot = null; S.scan = null; S.spotT = 0; S.toolFor = null; S.html = '';
-                try { cwpToast('💗 Hết tim rồi, tạm bỏ qua nhiệm vụ này nhé!', 2400); } catch (e) { }
+                try { cwpToast('💗 Hết tim rồi, tạm bỏ qua nhiệm vụ này nhé!', 2000); } catch (e) { }
                 cur = curMission();
             }
             if (cur && S.toolFor !== cur.id) {   // sang nhiệm vụ kế: ô chọn / công cụ nhảy sang loại đó, chỉ còn việc tìm đúng ô để bấm
@@ -20285,7 +20391,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
             try { ordAssist(false); const bar = document.getElementById('cwp-bar'), tb = document.getElementById('cwp-tbtn'); if (isTouch() && bar && bar.classList.contains('open') && tb) tb.click(); } catch (e) { }
         }
         if (how !== 'later') { try { localStorage.setItem(KEY, how); } catch (e) { } }
-        try { if (wasHold) { simDebt = 0; cwpToast(how === 'done' ? '🌿 Cozy Island bắt đầu!' : '🌿 Game bắt đầu chạy', 2800); } else if (how === 'done') cwpToast('🎉 Chúc bạn chơi vui!', 2600); } catch (e) { }
+        try { if (wasHold) { simDebt = 0; cwpToast(how === 'done' ? '🌿 Cozy Island bắt đầu!' : '🌿 Game bắt đầu chạy', 3000); } else if (how === 'done') cwpToast('🎉 Chúc bạn chơi vui!', 3000); } catch (e) { }
     }
 
     // ----- nút trong ⚙️ + tự chạy lần đầu -----
@@ -20339,11 +20445,11 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
     const _oc = orderCreate; orderCreate = function () { const r = _oc.apply(this, arguments); if (r && r.ok && !tutOn()) mark('order'); return r; };
     // --- bong bóng nhắc ---
     const st = document.createElement('style');
-    st.textContent = '#cw-nudge{position:fixed;z-index:21;left:50%;top:calc(78px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);opacity:0;visibility:hidden;display:flex;align-items:flex-start;gap:8px;width:max-content;max-width:min(430px,calc(100vw - 24px));box-sizing:border-box;padding:9px 10px 9px 12px;border-radius:14px;background:rgba(255,252,244,.97);box-shadow:0 6px 22px rgba(0,0,0,.25);color:#2c3e50;font:500 13px/1.5 "Segoe UI",Tahoma,sans-serif;transition:opacity .45s,transform .45s,visibility 0s linear .45s}' +
+    st.textContent = '#cw-nudge{position:fixed;z-index:21;left:50%;top:calc(46px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);opacity:0;visibility:hidden;display:flex;align-items:flex-start;gap:8px;width:max-content;max-width:min(430px,calc(100vw - 24px));box-sizing:border-box;padding:9px 10px 9px 12px;border-radius:14px;background:rgba(255,252,244,.97);box-shadow:0 6px 22px rgba(0,0,0,.25);color:#2c3e50;font:500 13px/1.5 "Segoe UI",Tahoma,sans-serif;transition:opacity .45s,transform .45s,visibility 0s linear .45s}' +
         '#cw-nudge.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .45s,transform .45s}#cw-nudge .ic{font-size:18px;line-height:1.2}#cw-nudge .tx{flex:1}#cw-nudge b{color:#2f5b36}' +
         '#cw-nudge .ac{margin-top:5px;display:flex;gap:6px;flex-wrap:wrap}#cw-nudge .ac button{border:0;border-radius:12px;padding:4px 11px;background:#4e7a57;color:#fff;font:600 12px "Segoe UI",Tahoma,sans-serif;cursor:pointer}' +
         '#cw-nudge .x{border:0;background:transparent;color:#8a8f80;font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:8px}#cw-nudge .x:hover{background:#eef2e4}' +
-        'body.cwp-touch #cw-nudge{top:calc(64px + env(safe-area-inset-top,0px))}';
+        'body.cwp-touch #cw-nudge{top:calc(40px + env(safe-area-inset-top,0px))}';
     document.head.appendChild(st);
     const el = document.createElement('div'); el.id = 'cw-nudge'; document.body.appendChild(el);
     let hideT = 0, act = null;
@@ -20356,7 +20462,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
     function show(ic, html, btn, fn, ms) {
         el.innerHTML = '<span class="ic">' + ic + '</span><div class="tx">' + html + (btn ? '<div class="ac"><button type="button" data-go="1">' + btn + '</button></div>' : '') + '</div><button type="button" class="x" title="Đóng">✕</button>';
         act = fn || null; el.classList.add('show'); lastAny = performance.now();
-        clearTimeout(hideT); hideT = setTimeout(hide, ms || 11000);
+        clearTimeout(hideT); hideT = setTimeout(hide, ms || 10000);
     }
     const TOOLS = { '🌳': ['plant', 'cây', 'Trồng', '1'], '🌊': ['pond', 'ao hồ', 'Đào ao', '3'], '🏠': ['build', 'nhà', 'Xây nhà', '2'], '🌱': ['farm', 'ruộng', 'Khai ruộng', '4'] };
     const icoOf = { plant: '🌳', pond: '💧', build: '🏠', farm: '🌾' };
@@ -20395,14 +20501,14 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
             if (used[k] || (dev === 'pc' && tc) || (dev === 'touch' && !tc) || (needOrder && !used.order)) continue;
             const id = k + ':' + dev; if (shownThisSession.has(id) || (tipN[id] || 0) >= 2) continue;
             shownThisSession.add(id); tipN[id] = (tipN[id] || 0) + 1; save();
-            show('✨', txt(), null, null, 12000); return true;
+            show('✨', txt(), null, null, 10000); return true;
         }
         return false;
     }
     function hotNudge() {   // mục "🏠6" trên menu: hơn 5 người cùng làm một việc => mời ghé xem
         const top = window.cwHudTop; if (!top || top.n <= 5) return false;
         const now = performance.now(); if (now - (hotAt[top.k] || -1e9) < HOT_GAP) return false; hotAt[top.k] = now;
-        show(top.ico, '<b>' + top.n + ' người</b> đang cùng <b>' + top.name + '</b> — đảo đang thay đổi nhanh đấy!', null, null, 9000);   // chỉ thông báo (đã bỏ nút 👀 Ghé xem)
+        show(top.ico, '<b>' + top.n + ' người</b> đang cùng <b>' + top.name + '</b> — đảo đang thay đổi nhanh!', null, null, 5000);   // chỉ thông báo (đã bỏ nút 👀 Ghé xem)
         return true;
     }
     // KẸT Ở 4★ / 4.5★ QUÁ LÂU (15 phút game): gợi ý những huy hiệu còn thiếu để lên sao kế tiếp (lặp lại mỗi 15 phút nếu vẫn kẹt)
@@ -20433,7 +20539,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         let star = ''; try { if (cwStar.half > 0) star = ' và đạt cấp <b>' + CW_STAR_NAMES[cwStar.half] + '</b>'; } catch (e) { }
         const btn = ms >= ISLE_BTN;
         show('🏝️', 'Hòn đảo của bạn đã phát triển được <b>' + dur + '</b>' + star + ' 🌿. Nếu muốn khám phá một hòn đảo hoàn toàn khác, bạn có thể <b>tạo đảo mới</b>' + (btn ? '.' : ' (menu 🌿 → 🏝️ Tạo đảo mới).'),
-            btn ? '🏝️ Tạo đảo mới' : null, btn ? () => { if (confirm('Tạo đảo mới?\nHòn đảo hiện tại sẽ bị xoá và một hòn đảo mới được tạo từ đầu.')) cwNewGame(); } : null, 16000);
+            btn ? '🏝️ Tạo đảo mới' : null, btn ? () => { if (confirm('Tạo đảo mới?\nHòn đảo hiện tại sẽ bị xoá và một hòn đảo mới được tạo từ đầu.')) cwNewGame(); } : null, 15000);
         return true;
     }
     setInterval(() => {
@@ -20504,7 +20610,7 @@ cwBoot();
         const left = DECOR_ORDER.filter(k => !isUnl(k)); if (!left.length) return null;
         const k = left[(Math.random() * left.length) | 0]; unl().push(k);
         const K = DECOR_KINDS[k];
-        try { cwpToast('🎁 ' + why + ': mở khoá đồ trang trí mới ' + K.ico + ' ' + K.name + ' (công cụ 🏮, phím 5)', 4200); } catch (e) { }
+        try { cwpToast('🎁 ' + why + ': mở khoá đồ trang trí mới ' + K.ico + ' ' + K.name + ' (công cụ 🏮, phím 5)', 3000); } catch (e) { }
         try { timeline.push({ t: simClock, text: '🎁 Mở khoá đồ trang trí: ' + K.ico + ' ' + K.name + ' (' + why.toLowerCase() + ')' }); } catch (e) { }
         if (!isUnl(CWP.decorKind)) setDecorKind(k);
         palSync(); return k;
@@ -20550,11 +20656,11 @@ cwBoot();
         const r = decorCheck(gx, gy);
         if (!r.ok) { cwDeny('deny', '✖ ' + r.reason); return; }
         const e = ext();
-        if (r.turn) { r.remove.vert = true; benchAngCache.delete(r.remove); cwpToast('🪑 Đã xoay ghế sang dọc (bấm lần nữa để cất)', 1600); return; }
+        if (r.turn) { r.remove.vert = true; benchAngCache.delete(r.remove); cwpToast('🪑 Đã xoay ghế sang dọc (bấm lần nữa để cất)', 2000); return; }
         if (r.remove) {
             e.decor.splice(e.decor.indexOf(r.remove), 1);
             for (const p of footCells(r.remove.k, r.remove.gx, r.remove.gy)) if (inG(p[0], p[1])) grid[p[0]][p[1]].reserved = false;
-            cwpToast('Đã cất ' + DECOR_KINDS[r.remove.k].name.toLowerCase(), 1300); return;
+            cwpToast('Đã cất ' + DECOR_KINDS[r.remove.k].name.toLowerCase(), 2000); return;
         }
         const K = DECOR_KINDS[CWP.decorKind];
         if (!cwHeartsCan(K.cost)) { cwDeny('noheart', cwNoHeartMsg(K.cost)); return; }
@@ -20563,7 +20669,7 @@ cwBoot();
         if (CWP.decorKind === 'garden') gardenAdopt(e.decor[e.decor.length - 1]);   // mẫu hoa + độ thưa: ngẫu nhiên, hoặc theo khóm kề bên
         for (const p of r.cells) grid[p[0]][p[1]].reserved = true;
         try { if (window.cwWorkSfx) window.cwWorkSfx('done'); } catch (er) { }
-        cwpToast(K.ico + ' Đã đặt ' + K.name.toLowerCase(), 1500);
+        cwpToast(K.ico + ' Đã đặt ' + K.name.toLowerCase(), 2000);
         try { logMile('decor_' + CWP.decorKind, K.ico + ' Làng có ' + K.name.toLowerCase() + ' đầu tiên'); } catch (er) { }
     }
     function decorSync() {   // giữ cờ reserved; ô không còn là cỏ (lũ, hồ lan, tải bản khác...) => đồ trang trí đó mất
@@ -20921,8 +21027,13 @@ cwBoot();
         }
         return _kca.apply(this, arguments);
     };
+    // Người mặt buồn (đang có ước nguyện) chỉ đứng / đi chậm trong làng của mình: không đi hẹn hò, không làm bạn hẹn / bạn trò chuyện của ai, không bị gọi đi lễ hội
+    Object.defineProperty(Bot.prototype, 'isWisher', { get() { return !!this[WISH]; } });
+    const _cgo = Bot.prototype.chatGuestOK;
+    Bot.prototype.chatGuestOK = function (o) { if (o && o.isWisher) return false; return _cgo.apply(this, arguments); };
     const _date = Bot.prototype.tryDateTask;
-    Bot.prototype.tryDateTask = function (pref) {   // cặp đôi: có ghế đá trống cả 2 chỗ gần đó thì đôi khi ra ghế ngồi cạnh nhau
+    Bot.prototype.tryDateTask = function (pref) {
+        if (this[WISH] || (pref && pref[WISH])) return false;   // cặp đôi: có ghế đá trống cả 2 chỗ gần đó thì đôi khi ra ghế ngồi cạnh nhau
         const L = this.look;
         if (Math.random() < 0.5 && !(this.elder || (this.job && !restOn(this)) || this.dat || dates.length >= DATE_MAX || !L || !L.sex || this.pop < 1 || this.dying || this.assignedCell || rainWants(this) || this.nightWants() || simClock < (this.dateRetry || 0))) {
             let pt = null, bd = 1e12; const R2 = (CHAT_R * DATE_PARTNER_R) * (CHAT_R * DATE_PARTNER_R);
@@ -21037,7 +21148,7 @@ cwBoot();
         if (!w.b.gone) w.b.bub = { k: 'heart', t: 3.2, d: 3.2 };
         let got = 0; try { got = cwHeartsAdd(1); } catch (e) { }
         const e = ext(); e.wish.n = (e.wish.n || 0) + 1;
-        cwpToast('💖 ' + nm + ' vui lắm! Ước nguyện đã thành sự thật' + (got ? ' · +1 ❤️' : ''), 3200);
+        cwpToast('💖 ' + nm + ' vui lắm! Ước nguyện đã thành sự thật' + (got ? ' · +1 ❤️' : ''), 3000);
         try { timeline.push({ t: simClock, text: '💖 Ước nguyện của ' + nm + ' đã thành sự thật' }); } catch (er) { }
         try { logMile('wish1', '💖 Ước nguyện đầu tiên của dân làng thành sự thật'); } catch (er) { }
     }
@@ -21195,7 +21306,7 @@ cwBoot();
                     const have = swans.filter(s => s.lid === id).length;   // mỗi hồ lớn đúng 2 con (theo id hồ)
                     for (let k = have; k < 2; k++) { const p = cells[(Math.random() * cells.length) | 0]; swans.push({ lid: id, x: (p[0] + 0.5) * T, y: (p[1] + 0.5) * T, tx: 0, ty: 0, wait: 0, dir: 1, ph: Math.random() * 6, pop: 0 }); }
                 }
-                if (swans.length && !mileDone.has('swan1')) { try { logMile('swan1', '🦢 Thiên nga bay về hồ (đảo đạt 4★)'); cwpToast('🦢 Thiên nga đã bay về các hồ lớn trên đảo!', 3500); } catch (e) { } }
+                if (swans.length && !mileDone.has('swan1')) { try { logMile('swan1', '🦢 Thiên nga bay về hồ (đảo đạt 4★)'); cwpToast('🦢 Thiên nga đã bay về các hồ lớn trên đảo!', 3000); } catch (e) { } }
             }
         }
         for (const s of swans) {
@@ -21266,7 +21377,7 @@ cwBoot();
             if (ext().met && Math.random() >= 0.15) return;
             ext().met = (ext().met || 0) + 1;
             meteor = { t: 0, d: 45, list: [] };
-            try { logMile('meteor1', '🌠 Mưa sao băng trên bầu trời đảo'); cwpToast('🌠 Mưa sao băng! Ngước nhìn bầu trời nào…', 3500); } catch (e) { }
+            try { logMile('meteor1', '🌠 Mưa sao băng trên bầu trời đảo'); cwpToast('🌠 Mưa sao băng! Ngước nhìn bầu trời nào…', 3000); } catch (e) { }
         }
         if (meteor) {
             meteor.t += dt;
