@@ -21131,7 +21131,13 @@ function cwpDrawPreviewGround() {   // ô xem trước xanh / đỏ / cam (đã 
     const rm = CWP.rm, hov = rm && rm.hover, pv = hov ? rm.anc[hov] : CWP.prev, act = (pv && pv.act) || hov || CWP.tool;   // pv.act = 'dig' khi đào mở rộng hồ // menu nhanh đang mở: xem trước theo icon đang rê / chạm
     if (rm && !hov) { cwpDrawRMTile(rm); return; }
     if (act === 'walk' || !pv) return;
-    if (!rm && !cwpToolAvail(act === 'dig' ? 'pond' : act)) return;   // loại việc đang xám (hết hạn mức) => không hiện ô chọn
+    const offId = act === 'dig' ? 'pond' : act, off = !rm && !ORDERS.some(o => o.cells.some(p => p[0] === pv.ax && p[1] === pv.ay)) && CWP_TOOLS.some(t => t.id === offId && t.id !== 'walk') && (!cwpToolAvail(offId) || !cwpToolAfford(offId));
+    if (off) {   // nút công cụ đang xám (hết tim / hết hạn mức): ô dưới con trỏ chuyển xám, không icon (không biến mất)
+        const T0 = TILE_SIZE, k0 = 1 / camera.zoom, ax = pv.ax, ay = pv.ay;
+        cwpGroundDraw(ax * T0, ay * T0, (ax + 1) * T0, (ay + 1) * T0, '150,150,150', 0.45, 'rgba(235,235,235,0.9)', null, k0);
+        cwpPvC = { r: { ok: false, reason: '', cells: [[ax, ay]] }, inQ: false, cx0: ax, cy0: ay, cx1: ax + 1, cy1: ay + 1, act: '', cost: 0, grey: true };
+        return;
+    }
     let r = cwpCheck(act, pv.ax, pv.ay);
     if (act === 'pond' && pv.single && pv.fx !== undefined && !r.ok) r = Object.assign({}, r, { cells: [[pv.fx, pv.fy]] });   // đào ao: chưa có khối 2x2 hợp lệ => chỉ hiện 1 ô dưới con trỏ
     if (!r.cells.length) return;
@@ -21147,6 +21153,7 @@ function cwpDrawPreview(time) {   // chỉ còn nhãn lý do (DOM); ô vẽ ở 
     if (!cwpTipEl) return;
     const s = cwpPvC;
     if (!s) { cwpTipEl.style.display = 'none'; return; }
+    if (s.grey) { cwpTipEl.style.display = 'none'; return; }
     const r = s.r, inQ = s.inQ, T = TILE_SIZE, z = camera.zoom;
     if (!inQ) {   // biểu tượng loại hành động ở GIỮA ô (vẽ sau cây / nhà / người nên không bị che); ô đã có lệnh thì thôi (đã có icon giữa ô + số thứ tự)
         const k = 1 / z, fs = Math.max(T * CWP_ICON_K, 8 * k);
@@ -27063,7 +27070,9 @@ var UPA = (function () {
         var c = cardC, hv = HOUSE_VARIANTS[c.houseVar];
         if (c.type !== TYPE_HOUSE || !isUpKind(hv)) { hide(); return; }
         var lv = window.cwUpLv(c), z = camera.zoom, hv2 = lv === 2 ? houseVariant2(c.houseVar) : hv, b = hv2.box || HOUSE_BOX, sc = c.houseScale;
-        card.style.left = ((c.sx - camera.x) * z + viewW / 2) + 'px'; card.style.top = ((c.sy + b.t * sc * 0.55 - camera.y) * z + viewH / 2) + 'px';
+        var cw = card.offsetWidth || 250, ch = card.offsetHeight || 90, px = (c.sx - camera.x) * z + viewW / 2, py = (c.sy + b.t * sc * 0.55 - camera.y) * z + viewH / 2;
+        px = Math.max(cw / 2 + 8, Math.min(viewW - cw / 2 - 8, px)); py = Math.max(ch + 70, Math.min(viewH - 14, py));   // luôn nằm trong màn hình (tháp cao + zoom lớn thì đỉnh tháp ra ngoài)
+        card.style.left = px + 'px'; card.style.top = py + 'px';
         var hearts = 0; try { hearts = cwHeartsGet(); } catch (e) { }
         var okStar = (cwStar.peak || 0) >= UP_STAR, okHeart = hearts + 1e-6 >= UP_COST, name = UP_NAME[hv.special], h;
         if (lv === 2) h = '<b>' + name + '</b><span class="lv m">Cấp 2</span><div class="d">' + UP_PERK[hv.special] + '</div>';
@@ -27097,11 +27106,18 @@ var UPA = (function () {
         return best;
     }
     var prevTap = window.cwCardTap;
+    function upTap(sx, sy) {   // true nếu bấm trúng công trình nâng cấp được (hiện / ẩn thẻ)
+        var c = null; try { c = hit(sx, sy); } catch (e) { c = null; }
+        if (!c) return false;
+        if (c === cardC) { hide(); return true; }
+        ensure(); cardC = c; card._h = ''; card.style.display = 'block'; cancelAnimationFrame(raf); render(); return true;
+    }
     window.cwCardTap = function (sx, sy) {
         var person = window.cwPickPerson ? window.cwPickPerson(sx, sy) : null;
         if (!person) {
+            if (cardC && hit(sx, sy) !== cardC) { /* chuyển sang chỗ khác: thẻ cũ ẩn bên dưới */ }
             var c = null; try { c = hit(sx, sy); } catch (e) { c = null; }
-            if (c) { if (c === cardC) { hide(); return; } ensure(); try { if (prevTap) prevTap(-9999, -9999); } catch (e) { } cardC = c; card._h = ''; card.style.display = 'block'; cancelAnimationFrame(raf); render(); return; }
+            if (c) { if (c !== cardC) { try { if (prevTap) prevTap(-9999, -9999); } catch (e) { } } upTap(sx, sy); return; }
         }
         hide();
         if (prevTap) prevTap(sx, sy);
