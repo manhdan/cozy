@@ -6401,7 +6401,7 @@ class Bot {
         const hs = this.homeHouse;
         const gone = !this.sleepOut && (!hs || grid[Math.floor(hs.x / TILE_SIZE)][Math.floor(hs.y / TILE_SIZE)].type !== TYPE_HOUSE);   // nhà bị dỡ => ra ngoài ngay
         const jr = this.jobRestIn;   // nghỉ nghề trong nhà vì mưa: ở trong cho tới khi tạnh
-        if (gone || !(this.nightWants() || (jr && jr.kind !== 'mail' && rainTierFor(this) >= 1))) {   // (nightWants đã tính DN.on) // người đưa thư: ở trong tới khi hết bão / sáng (nightWants), không cần chờ tạnh mưa
+        if (gone || !(this.nightWants() || simClock < (this.inUntil || 0) || (jr && jr.kind !== 'mail' && rainTierFor(this) >= 1))) {   // (nightWants đã tính DN.on) // người đưa thư: ở trong tới khi hết bão / sáng (nightWants), không cần chờ tạnh mưa
             this.state = 'IDLE'; this.wait = 0.3 + Math.random() * 3; this.pop = 0.55;   // bước ra cửa, hiện dần
             this.homeHouse = null; this.homeDoor = null; this.sleepOut = false;
             if (jr) {   // tạnh mưa mà chưa hết ngày: ra cửa ngồi nghỉ tiếp
@@ -7492,9 +7492,11 @@ if (restOn(this)) { this.mailDismountIfRiding(c); this.endMail(); return; }   //
         let pt = null, bd = 1e12; const R2 = (CHAT_R * DATE_PARTNER_R) * (CHAT_R * DATE_PARTNER_R);
         for (const o of (pref ? [pref] : bots)) {
             if (o === this || o.elder || (o.job && !restOn(o)) || o.warm || !o.look || o.look.sex === L.sex || o.state !== 'IDLE' || !this.chatGuestOK(o)) continue;
-            const kn = window.cwKin(this, o), f = kn === 2 ? 0.05 : 1, d2 = ((o.x - this.x) * (o.x - this.x) + (o.y - this.y) * (o.y - this.y)) * f; if (d2 < R2 && d2 < bd) { bd = d2; pt = o; }   // cặp thầm thích nhau: tìm nhau từ xa gấp ~4 lần
+            let kn = window.cwKin(this, o), f = kn === 2 ? 0.05 : 1; if (window.cwHas(this, 'flirt')) { f *= (this.flirtLast === o ? 8 : 0.5); } else if (window.cwHas(o, 'flirt')) f *= 0.5;   // người hay hẹn hò: ít quay lại bạn hẹn vừa rồi, tìm bạn hẹn mới xa hơn; ai cũng dễ bị họ thu hút
+            const d2 = ((o.x - this.x) * (o.x - this.x) + (o.y - this.y) * (o.y - this.y)) * f; if (d2 < R2 && d2 < bd) { bd = d2; pt = o; }   // cặp thầm thích nhau: tìm nhau từ xa gấp ~4 lần
         }
         if (!pt) { this.dateRetry = simClock + DATE_RETRY_NOPAIR; return false; }
+        this.flirtLast = pt; pt.flirtLast = this;
         const T = TILE_SIZE, mx = (this.x + pt.x) / 2, my = (this.y + pt.y) / 2; let best = null, bs = 1e12;
         const ppl = []; for (const o of bots) if (o !== this && o !== pt && !o.gone && !o.dying && (o.pop === undefined || o.pop >= 1)) ppl.push(o); for (const k of kids) if (!k.gone) ppl.push(k);   // những người khác (kể cả cặp khác đang hẹn hò)
         const far = (px, py) => { let m = 1e12; for (const o of ppl) { const dx = o.x - px, dy = o.y - py, q = dx * dx + dy * dy; if (q < m) m = q; } return Math.sqrt(m) / T; };
@@ -8788,7 +8790,7 @@ class Kid {
         if (this.pop < 1) this.pop = Math.min(1, this.pop + dt * 0.8);
         this.age += dt;
         if (this.state === 'SLEEP') {      // bé ngủ trong nhà, sáng ra hiện dần ở cửa
-            if (!(dnSleepy(this.bedJ, this.wakeJ, true) || rainWants(this))) { this.nightTry = 0; this.state = 'IDLE'; this.timer = 0.3 + Math.random() * 3; this.pop = 0.55; this.pose = 'stand'; this.tx = this.x; this.ty = this.y; }
+            if (!(dnSleepy(this.bedJ, this.wakeJ, true) || rainWants(this) || simClock < (this.inUntil || 0))) { this.nightTry = 0; this.state = 'IDLE'; this.timer = 0.3 + Math.random() * 3; this.pop = 0.55; this.pose = 'stand'; this.tx = this.x; this.ty = this.y; }
             return;
         }
         // đang chơi/vẽ/nhảy dây/vuốt ve... mà mưa to (hoặc tới giờ ngủ) => bỏ dở, về nhà trú
@@ -10185,6 +10187,7 @@ function drawBot(b, x, y, time) {
     function nameOf(seed, fem) { if (seed >= PBASE) { const P = PERS[seed - PBASE]; if (P) return P.n; } const R = rng(seed), L = fem === true ? NM_F : fem === false ? NM_M : NM_ALL; return L[(R() * L.length) | 0]; }   // chỉ TÊN (kho 160 tên / giới); trùng tên được tránh lúc sinh người mới nhờ cwSeedFree
     // ===== QUỸ NHÂN VẬT CÓ VAI (100 người) =====
     // Mỗi dòng: Tên Giới(M/F) Tuổi(k = hợp làm bé, a = chỉ người lớn, - = cả hai) rồi các tag; +Tên = thầm thích; &Tên,Tên = bạn thân.
+    // Tag ẩn (không hiện khi rê chuột): flirt = hay hẹn hò, đổi bạn hẹn liên tục · lazy = lười, hay đi dạo / lảng đi chơi thay vì làm việc.
     // Tag: hunter / sailor / post = nghề ưu tiên; chat warm watch love shore fish = nâng hệ số tính cách tương ứng; sing dance chess = thích hát / múa / cờ; lost = bé hay đi lạc; cold / coast = quen làng vùng lạnh / ven biển.
     // Tên của người thuộc quỹ được mã hoá ngay trong seed: seed = PBASE + số thứ tự (nên vẫn lưu / tải được mà không thêm trường nào); seed ngẫu nhiên thường luôn < PBASE.
     const PBASE = 4294900000, PERSONA_P = 0.8;
@@ -10257,20 +10260,20 @@ function drawBot(b, x, y, time) {
         'Cora F a love shore +Rhys',
         'Lance M a love +Gwen',
         'Gwen F a love +Lance',
-        'Orson M a sing chat',
+        'Orson M a sing chat lazy',
         'Melody F - sing dance',
         'Harmony F - sing chat',
         'Carmen F a dance love +Tango',
         'Tango M a dance love +Carmen',
         'Fiona F - dance chat',
-        'Monet F a watch',
-        'Vincent M a watch chat',
-        'Georgia F a watch',
+        'Monet F a watch flirt',
+        'Vincent M a watch chat flirt',
+        'Georgia F a watch lazy',
         'Pablo M a watch dance',
         'Magnus M a chess &Garry,Judit',
         'Garry M a chess &Magnus',
         'Judit F a chess &Magnus',
-        'Wendell M a chat',
+        'Wendell M a chat lazy',
         'Dottie F a chat warm',
         'Gus M a chat warm',
         'Mildred F a chat warm',
@@ -10286,7 +10289,7 @@ function drawBot(b, x, y, time) {
         'Rusty M a post chat',
         'Percy M a post warm',
         'Ginger F - warm chat dance',
-        'Basil M a warm chess',
+        'Basil M a warm chess lazy',
         'Rosalind F a love watch',
         'Cyrus M a hunter shore',
     ];
@@ -10310,6 +10313,7 @@ function drawBot(b, x, y, time) {
     window.cwPersonaApply = function (tr) {   // tag tính cách => nâng hệ số (1,8-2,3)
         const P = perOfSeed(tr.seed); if (!P) return tr;
         for (const k of ['chat', 'warm', 'watch', 'love', 'shore', 'fish']) if (P.tags.has(k)) tr[k] = Math.max(tr[k] || 0, 1.8 + Math.random() * 0.5);
+        if (P.tags.has('flirt')) tr.love = Math.max(tr.love || 0, 3.5);   // tag ẩn (không hiện khi rê chuột): hay đi hẹn hò, lăng nhăng
         if (P.tags.has('sing') || P.tags.has('dance')) tr.chat = Math.max(tr.chat || 0, 1.2);
         return tr;
     };
@@ -18360,9 +18364,10 @@ function updateMailFolk(dt) {
 }
 function jobPool(pool, job) {   // người có tag nghề khớp được ưu tiên; không có thì lấy người KHÔNG mang tag nghề khác (để thủy thủ không bị giao đi săn); hết cách mới lấy tất cả
     const m = pool.filter(b => window.cwPJob(b) === job); if (m.length) return m;
-    const f = pool.filter(b => !window.cwPJob(b)); return f.length ? f : pool;
+    return pool.filter(b => !window.cwPJob(b));   // không có người hợp: để trống (không ép thủy thủ đi săn)
 }
 function assignJobs() {
+    for (const b of bots) if (b.job === 'hunter' && window.cwPJob(b) && window.cwPJob(b) !== 'hunter' && !b.elder) { b.job = null; b.jb = null; b.stealth = false; b.jmove = false; try { b.look.job = null; } catch (e) { } }   // đã lỡ giao sai nghề (vd. thủy thủ đi săn): trả lại
     const want = Math.max(JOB_MIN, Math.round(bots.length * JOB_SHARE));
     for (const job of ['hunter', 'fisher']) {   // bỏ nghề thợ tỉa cây (pruner) và thợ mở đường (mapper)
         const w = job === 'fisher' ? Math.max(JOB_MIN, Math.round(Math.max(0, bots.length - FISHER_DELAY) * JOB_SHARE)) : want;   // ngư dân tính theo (số người - FISHER_DELAY)
@@ -18372,6 +18377,7 @@ function assignJobs() {
             let pool = bots.filter(b => !b.job && !b.elder && b.pop >= 1 && b.state === 'IDLE');   // người già không nhận nghề
             if (!pool.length) break;
             pool = jobPool(pool, job);
+            if (!pool.length) break;
             let b = pool[0]; for (const q of pool) if (q.adultAge < b.adultAge) b = q;   // [chỉnh] giao nghề cho người trẻ nhất (tuổi người lớn thấp nhất) để không vướng lịch lên người già
             b.job = job; jobLook(b.look, job); b.shirt = b.look.shirt; if (job === 'fisher') b.boatIdx = fisherSeq++; have++;   // ngoại hình nghề
         }
@@ -18382,6 +18388,7 @@ function assignJobs() {
             let pool = bots.filter(b => !b.job && !b.elder && b.pop >= 1 && b.state === 'IDLE');
             if (!pool.length) break;
             pool = jobPool(pool, 'postman');
+            if (!pool.length) break;
             let b = pool[0]; for (const q of pool) if (q.adultAge < b.adultAge) b = q;
             b.job = 'postman'; jobLook(b.look, 'postman'); b.shirt = b.look.shirt; have++;
         }
@@ -24926,7 +24933,7 @@ cwBoot();
             need: (v, c) => v.size >= 3 && (() => { const r = countIn(c.x, c.y, 6, q => q.type === TYPE_TREE); return r.n / Math.max(1, r.all) >= 0.42; })(), done: (w) => countIn(w.cx, w.cy, 6, q => q.type === TYPE_TREE).n <= w.t0 - 3 },
         { k: 'field', cost: 0.5, tool: 'farm', txt: 'Làng mình chưa có thửa ruộng nào, muốn có ruộng gần làng để tự trồng lúa ngô.',
             need: (v, c, hs) => v.size >= 4 && nearVil(hs, 10, q => q.type === TYPE_FIELD) === 0, done: (w) => nearVil(w.hs, 10, q => q.type === TYPE_FIELD) > 0 },
-        { k: 'decor', cost: 0.5, tool: 'decor', txt: 'Làng mình chưa có gì để trang trí cả… Một chiếc đèn lồng hay một vườn hoa thì đẹp biết bao.',
+        { k: 'decor', cost: 0.5, tool: 'decor', txt: 'Làng mình chưa có gì để trang trí cả… Một vườn hoa, một cột đèn hay một món trang trí nào đó thì đẹp biết bao.',
             need: (v, c, hs) => v.size >= 6 && unl().length > 0 && !decorNear(hs, 6), done: (w) => decorNear(w.hs, 7) }
     ];
     let wishes = [], wishCD = 150, wishChk = 0;
@@ -24942,7 +24949,8 @@ cwBoot();
             const hs = vHouses(vid); if (!hs.length) continue;
             const opts = WISHES.filter(W => { try { return W.need(v, c, hs); } catch (e) { return false; } });
             if (!opts.length) continue;
-            const W = opts[(Math.random() * opts.length) | 0];
+            const early = simClock < 1200, wk = (o) => early ? ((o.k === 'field' || o.k === 'lake') ? 5 : o.k === 'decor' ? 0.2 : 1) : 1;   // 20 phút đầu: thiên về ruộng / ao gần làng, ít đòi trang trí
+            let tw0 = 0; for (const o of opts) tw0 += wk(o); let r0 = Math.random() * tw0, W = opts[opts.length - 1]; for (const o of opts) { r0 -= wk(o); if (r0 <= 0) { W = o; break; } }
             const inVil = (b) => { const gx = b.x / T, gy = b.y / T; return gx >= v.x0 - 2 && gx <= v.x1 + 3 && gy >= v.y0 - 2 && gy <= v.y1 + 3; };   // người đang ở ĐÚNG làng này
             const who = bots.filter(b => !b.gone && !b.dying && !b.fading && b.pop >= 1 && !b.job && !b.boat && b.state !== 'SLEEP' && !b[WISH] && !b.fest && inVil(b)).sort((a, b) => Math.hypot(a.x / T - c.x, a.y / T - c.y) - Math.hypot(b.x / T - c.x, b.y / T - c.y))[0];
             if (!who) continue;
@@ -24989,6 +24997,10 @@ cwBoot();
                     }
                 }
             } catch (e) { }
+        }
+        if (!rainOnly && !this.elder && !this.job && !this[WISH] && !this.boat && this.pop >= 1) {   // tag ẩn: hay hẹn hò (lăng nhăng) / lười (trốn việc)
+            if (window.cwHas(this, 'flirt') && Math.random() < 0.3 && simClock >= (this.dateRetry || 0)) { try { if (this.tryDateTask()) return; } catch (e) { } }
+            if (window.cwHas(this, 'lazy') && Math.random() < 0.5) { try { if (this.tryAdultLeisure() || this.gentleStroll(Math.random() < 0.5 ? 2 : 1)) return; } catch (e) { } }
         }
         const w = this[WISH];
         if (w && !rainOnly && !this.elder && !this.job) {
@@ -25179,8 +25191,10 @@ cwBoot();
         const e0 = null, e = el.filter(b => b !== tgt)[0] ? el.filter(b => b !== tgt)[(Math.random() * el.filter(b => b !== tgt).length) | 0] : null;
         if (!e) return false;
         const nm = window.cwBotName ? window.cwBotName(tgt) : 'bạn ấy';
+        const jb = kind === 'adult' ? tgt.job : null, bk = kind === 'adult' && tgt.brk ? String(tgt.brk.kind) : '', hs = (t) => { try { return window.cwHas(tgt, t); } catch (e) { return false; } };
+        const hint = kind !== 'adult' || jb ? '' : /fish/.test(bk) || hs('fish') ? '(Nghe nói người ấy thích đi câu cá.)' : /sea|gaze|shore/.test(bk) || hs('shore') || hs('coast') ? '(Nghe nói người ấy thích đi dạo bờ biển.)' : /lake/.test(bk) ? '(Nghe nói người ấy thích ngắm hồ nước.)' : /stroll/.test(bk) ? '(Nghe nói người ấy hay đi dạo quanh làng.)' : '';
         const txt = kind === 'kid' ? 'Bé ' + nm + ' đi chơi từ nãy mà chưa thấy về… Ai tìm giúp tôi với! (Rê chuột vào từng người để xem tên; thấy đúng bé ' + nm + ' thì bấm vào bé.)'
-            : 'Tôi đang tìm ' + nm + ', đi nghỉ đâu mất rồi, có việc cần gặp… Ai tìm giúp tôi với! (Rê chuột vào từng người để xem tên; thấy đúng tên ' + nm + ' thì bấm vào người đó.)';
+            : 'Tôi đang tìm ' + (jb === 'hunter' ? 'thợ săn ' : jb === 'fisher' ? 'thủy thủ ' : jb === 'postman' ? 'bác đưa thư ' : '') + nm + ', đi đâu mất rồi, có việc cần gặp…' + (hint ? ' ' + hint : '') + ' Ai tìm giúp tôi với! (Rê chuột vào từng người để xem tên; thấy đúng tên ' + nm + ' thì bấm vào người đó.)';
         lostQ = { b: e, tgt, kind, name: nm, t: LOST_LIFE, found: false, W: { tool: null, txt } };
         try { cwpToast('👵 Có một cụ già đang nhờ tìm ' + (kind === 'kid' ? 'bé ' : '') + nm + ' — bấm vào cụ để nghe, rồi đi tìm', 3800); } catch (er) { }
         return true;
@@ -25196,7 +25210,11 @@ cwBoot();
         const t = Q.tgt; t.hop = 0.7;
         if (Q.kind === 'kid' && kids.includes(t)) {
             const hm = (t.home && grid[Math.floor(t.home.x / T)][Math.floor(t.home.y / T)].type === TYPE_HOUSE) ? t.home : nearestHouse(t.x, t.y, 40);
-            t.idle(0); if (hm) { const door = nearestLand(hm.x, hm.y + T) || { x: hm.x, y: hm.y + T }; t.goTo(door.x, door.y, 'IDLE', 2); }
+            const eb = Q.b, ok = eb && !eb.gone && !eb.dying && bots.includes(eb);
+            t.idle(0);
+            if (ok) {   // bé chạy về chỗ cụ già đang tìm, rồi cả hai cùng vào nhà (lostRunUpdate)
+                const p = nearestLand(eb.x, eb.y + 4) || { x: eb.x, y: eb.y }; t.goTo(p.x, p.y, 'IDLE', 1); lostRun = { b: eb, k: t, t: 25 };
+            } else if (hm) { const door = nearestLand(hm.x, hm.y + T) || { x: hm.x, y: hm.y + T }; t.goTo(door.x, door.y, 'IDLE', 2); }
         } else if (t.bub !== undefined || t.bub === undefined) { try { t.bub = { k: 'heart', t: 3.2, d: 3.2 }; } catch (er) { } }
         let got = 0; try { got = cwHeartsAdd(lostReward()); } catch (er) { }
         if (!Q.b.gone) Q.b.bub = { k: 'heart', t: 3.2, d: 3.2 };
@@ -25204,7 +25222,19 @@ cwBoot();
         try { timeline.push({ t: simClock, text: Q.kind === 'kid' ? '🧒 Tìm thấy bé ' + Q.name + ' đi chơi chưa về' : '🙋 Tìm thấy ' + Q.name + ' giúp cụ già' }); logMile('lost1', '🧒 Lần đầu giúp cụ già tìm người'); } catch (er) { }
         lostEnd();
     }
+    let lostRun = null;
+    function lostRunUpdate(dt) {   // sau khi tìm thấy bé: chờ bé tới chỗ cụ, rồi cụ + bé cùng vào nhà của cụ (ở trong ~20 giây)
+        const R = lostRun; if (!R) return;
+        const b = R.b, k = R.k; R.t -= dt;
+        if (b.gone || b.dying || !bots.includes(b) || !kids.includes(k) || k.gone) { lostRun = null; return; }
+        if (Math.hypot(k.x - b.x, k.y - b.y) > T * 1.6 && R.t > 0) { if (k.state === 'IDLE' && !k.moving) { const p = nearestLand(b.x, b.y + 4); if (p) k.goTo(p.x, p.y, 'IDLE', 1); } return; }
+        lostRun = null;
+        if (b.pop < 1 || b.boat) return;
+        b.wait = 0; b.rest = null; b.restAfter = null;
+        if (b.tryGoHome(true) && b.homeDoor) { const until = simClock + 20; b.inUntil = until; k.inUntil = until; k.goTo(b.homeDoor.x, b.homeDoor.y, 'SLEEP', 0); }
+    }
     function lostUpdate(dt) {
+        lostRunUpdate(dt);
         const Q = lostQ;
         if (!Q) {
             if ((lostCD -= dt) <= 0) { lostCD = LOST_GAP[0] + Math.random() * (LOST_GAP[1] - LOST_GAP[0]); if (CWP.mode === 'order' && !tutOn() && wishes.length < 2) { if (!lostTry()) lostCD = 40; } }
@@ -25231,7 +25261,7 @@ cwBoot();
         document.body.classList.toggle('cw-lsthov', p === Q.tgt);
     }
     function lostKidHit(sx, sy) { const Q = lostQ; return !!(Q && !Q.found && lostPick(sx, sy) === Q.tgt); }
-    window.cwLost = { start: () => lostTry(), state: () => lostQ, find: () => lostFound() };   // thử nhanh trong console
+    window.cwLost = { run: () => lostRun, start: () => lostTry(), state: () => lostQ, find: () => lostFound() };   // thử nhanh trong console
     { const st = document.createElement('style'); st.textContent = 'body.cw-lsthov canvas{cursor:pointer!important}'; document.head.appendChild(st); }
     function drawLostIcon(Q, x, y, time) {   // icon cụ già: bong bóng trắng có dấu ? và hình người
         const z = camera.zoom, k = Math.max(1, 0.9 / z), bob = Math.sin(time * 2.6) * 1.5;
@@ -25824,7 +25854,7 @@ cwBoot();
     // ===== 🍾 CHAI THƯ DẠT VÀO BỜ: mỗi 1-2 ngày game một chai nằm lấp lánh trên bãi cát; người chơi BẤM vào chai để nhặt.
     //   Trong chai: công thức đồ trang trí (mở 1 món chưa có, như mở khoá ngẫu nhiên) · hoặc +1 ❤️ · hoặc một lá thư vui (+½ ❤️). Để quá 1 ngày chai trôi đi mất.
     //   Chỉ có thông báo chung (không chỉ chỗ, không có nút tìm): người chơi phải tự đi dọc bờ tìm. Lưu ở CWP.ext.bt. Thử nhanh: cwBottle.spawn()
-    const BT_FIRST = 240 + Math.floor(Math.random() * 60), BT_EVERY = [450, 900], BT_LIFE = 600, BT_FADE = 20;   // giây game (1 ngày = 300)
+    const BT_FIRST = 240 + Math.floor(Math.random() * 60), BT_EVERY = [300, 600], BT_LIFE = 600, BT_FADE = 20;   // giây game (1 ngày = 300)
     const BT_LETTERS = ['Gửi người tìm thấy: hôm nay trời đẹp, mong đảo của bạn cũng vậy! 🌤️', 'Một hòn đảo xa xa gửi lời chào. Bên này vừa có cầu vồng đôi! 🌈',
         'Nếu bạn đọc được thư này, hãy trồng thêm một cái cây nhé 🌳', 'Ở đảo tôi, mèo ngủ trên mái nhà cả ngày. Còn đảo bạn? 🐱', 'Bí mật nhỏ: cá hay cắn câu lúc sáng sớm 🎣',
         'Chúc dân làng bạn luôn vui vẻ và có thật nhiều lễ hội 🎉', 'Tôi thả chai này từ một con thuyền buồm màu tím… ⛵', 'Đừng quên ngắm sao vào những đêm trời quang ✨',
@@ -25869,14 +25899,16 @@ cwBoot();
         ctx.strokeStyle = '#c0504a'; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(-1.2, -2.7); ctx.lineTo(-1.2, -0.5); ctx.stroke();
         ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-2, -2.9, 2.6, 0.5, 0, 0, TAU); ctx.fill();         // bóng sáng
         ctx.restore();
+        const cyc = (time + b.seed * 60) % 60, tk = cyc < 6 ? Math.sin(cyc / 6 * Math.PI) : 0;   // thường sáng bình thường; mỗi phút lấp lánh mạnh ~6 giây (mờ vào / ra)
+        if (tk <= 0.01) return;
         // lấp lánh to, dễ thấy: quầng sáng nhịp thở + 2 ngôi sao 4 cánh nháy lệch nhau (luôn đủ to kể cả khi thu nhỏ bản đồ)
         const zk = Math.max(1, 0.8 / camera.zoom), pulse = 0.5 + 0.5 * Math.sin(time * 2.2 + b.seed * 7);
-        ctx.save(); ctx.globalAlpha *= a * (0.25 + 0.3 * pulse); ctx.fillStyle = '#fff6c4'; ctx.beginPath(); ctx.arc(x, y - 3, (9 + 3 * pulse) * zk, 0, TAU); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.globalAlpha *= a * tk * (0.25 + 0.3 * pulse); ctx.fillStyle = '#fff6c4'; ctx.beginPath(); ctx.arc(x, y - 3, (9 + 3 * pulse) * zk, 0, TAU); ctx.fill(); ctx.restore();
         for (const [ph, ox, oy, R] of [[0, -4, -9, 10], [0.9, 7, -4, 6.5]]) {
             const tw = (time * 0.7 + b.seed * 3 + ph) % 1.6;
             if (tw >= 0.9) continue;
             const k = Math.sin(tw / 0.9 * Math.PI), sx = x + ox * zk, sy = y + oy * zk, r = R * k * zk;
-            ctx.save(); ctx.globalAlpha *= a * k; ctx.fillStyle = '#fffbe0'; ctx.strokeStyle = 'rgba(255,214,90,0.9)'; ctx.lineWidth = 0.8;
+            ctx.save(); ctx.globalAlpha *= a * k * tk; ctx.fillStyle = '#fffbe0'; ctx.strokeStyle = 'rgba(255,214,90,0.9)'; ctx.lineWidth = 0.8;
             ctx.beginPath(); ctx.moveTo(sx, sy - r); ctx.lineTo(sx + r * 0.22, sy - r * 0.22); ctx.lineTo(sx + r, sy); ctx.lineTo(sx + r * 0.22, sy + r * 0.22); ctx.lineTo(sx, sy + r); ctx.lineTo(sx - r * 0.22, sy + r * 0.22); ctx.lineTo(sx - r, sy); ctx.lineTo(sx - r * 0.22, sy - r * 0.22); ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.restore();
         }
