@@ -750,14 +750,14 @@ const TOTAL_CELLS = GRID_W * GRID_H;
 // Dải tỉ lệ [min, max] cho từng loại (thay cho một mốc cố định)
 const RANGE = {
     [TYPE_WATER]: [0.01, 0.045],   // nước được vượt 3% tới tối đa 4.5%
-    [TYPE_TREE]: [0.14, 0.21],   // trần của BOT / thiên nhiên 21% (22% - 1% dành cho người chơi) trần cây 27% -> 22% (min kéo theo 18% -> 14%)
+    [TYPE_TREE]: [0.14, 0.19],   // trần của BOT / thiên nhiên 19% (20% - 1% dành cho người chơi) trần cây 27% -> 22% -> 20% (r59: bot 21% -> 19%; min kéo theo 18% -> 14%)
     // // rừng dày hơn nên dải tỉ lệ cây nâng lên
     [TYPE_HOUSE]: [0.02, 0.027],   // trần của BOT 2,7% (trước 3,1%: chơi thử 2 giờ game có ~370 nhà cho tối đa 80 dân, làng trông vắng) — (tổng 3,3% gồm 0,2% dành cho người chơi) — giảm từ 3,4% / 3,6% vì làng nhiều nhà quá
     [TYPE_FIELD]: [0.005, 0.012]   // trần 1.5% -> 1.2% ruộng 0.5-1.2%; dưới min chỉ khuyến khích (addFactor), không ép
 };
-const PLAYER_TREE_MAX = 0.22, PLAYER_TREE_FRAC = 0.01;   // trần tuyệt đối 22%; người chơi trồng tối đa PLAYER_TREE_FRAC (1%) đất bằng cây của mình, trong khoảng 21% -> 22%
+const PLAYER_TREE_MAX = 0.20, PLAYER_TREE_FRAC = 0.01;   // trần tuyệt đối 20% (= bot 19% + 1%); người chơi trồng tối đa PLAYER_TREE_FRAC (1%) đất bằng cây của mình, trong khoảng 19% -> 20%
 // QUỸ RIÊNG của người chơi (giống cây): bot chỉ tới RANGE[t][1]; người chơi được thêm một phần PLAYER_FUND_FRAC[t] (tính theo % đất) và chỉ tới RANGE[t][1] + phần đó.
-//   nhà: bot 3,4% + 0,2% = 3,6% | nước: bot 4,5% + 0,2% = 4,7% | ruộng: bot 1,2% + 0,1% = 1,3% | cây: bot 21% + 1% = 22% (G39)
+//   nhà: bot 3,4% + 0,2% = 3,6% | nước: bot 4,5% + 0,2% = 4,7% | ruộng: bot 1,2% + 0,1% = 1,3% | cây: bot 19% + 1% = 20% (r59)
 const PLAYER_FUND_FRAC = { [TYPE_TREE]: PLAYER_TREE_FRAC, [TYPE_HOUSE]: 0.002, [TYPE_WATER]: 0.002, [TYPE_FIELD]: 0.001 };
 const PLAYER_MAX = { [TYPE_TREE]: PLAYER_TREE_MAX, [TYPE_HOUSE]: RANGE[TYPE_HOUSE][1] + PLAYER_FUND_FRAC[TYPE_HOUSE], [TYPE_WATER]: RANGE[TYPE_WATER][1] + PLAYER_FUND_FRAC[TYPE_WATER], [TYPE_FIELD]: RANGE[TYPE_FIELD][1] + PLAYER_FUND_FRAC[TYPE_FIELD] };
 const FIELD_ABANDON_K = 0.2;    // hệ số công việc bỏ/phá ruộng => còn 1/5
@@ -5934,6 +5934,7 @@ class Bot {
         this.rest = null; this.restAfter = null;
         if (this.elder) { this.elderTask(); return; }   // người già: không nhận việc
         if (!rainOnly && this.rainPlantOK()) { const p0 = this.path; this.findTask(true); if (this.state === 'WALKING' && this.path !== p0) return; }   // mưa nhỏ: thử nhận việc trồng cây trước; không có thì rơi xuống luồng cũ (tryGoHome => về nhà)
+        if (!rainOnly && CWP.mode === 'order' && !this.job && !restOn(this) && this.rainPlantOK(true) && this.tryOrderTask('rain')) return;   // mưa nhỏ + người chơi giao việc được phép làm khi mưa (trồng cây): nhận ngay, bỏ qua khoảng chờ sau khi trú mưa (RAIN_AFTER_SHELTER)
         if (!rainOnly && this.tryGoHome()) return;         // ban đêm: về nhà ngủ
         if (!rainOnly && !this.job && !this.boat && WEATHER.on && rainWants(this) && simClock - (this.shelterT || -1e9) < RAIN_AFTER_SHELTER) { this.wait = 0.45; return; }   // vừa trú mưa trong nhà bước ra mà trời còn mưa: đứng chờ, không nhận việc chặt / trồng cây
         if (!rainOnly && this.fest && this.tryFestTask()) return;   // lễ hội: đi dự (lịch + địa điểm: FEST ở 24_digest_herds_mail.js)
@@ -6355,9 +6356,9 @@ class Bot {
         return true;
     }
     // Mưa nhỏ (tier 1): người lớn vẫn được nhận việc trồng cây (mưa còn giúp cây lớn nhanh: RAIN_GROW_BOOST). Mưa lớn / bão / ban đêm: về nhà như cũ.
-    rainPlantOK() {
+    rainPlantOK(ignoreShelter) {   // ignoreShelter: dùng cho LỆNH NGƯỜI CHƠI (không bị khoảng chờ RAIN_AFTER_SHELTER)
         if (!WEATHER.on || this.pop < 1 || this.boat || this.dying || this.girl !== undefined || this.elder) return false;
-        if (rainTierFor(this) !== 1 || !rainWants(this) || simClock - (this.shelterT || -1e9) < RAIN_AFTER_SHELTER) return false;   // người vừa trú mưa trong nhà thì không ra làm lại   // thợ săn / ngư dân vốn không về nhà vì mưa nhỏ nên không cần ngoại lệ
+        if (rainTierFor(this) !== 1 || !rainWants(this) || (!ignoreShelter && simClock - (this.shelterT || -1e9) < RAIN_AFTER_SHELTER)) return false;   // người vừa trú mưa trong nhà thì không ra làm lại   // thợ săn / ngư dân vốn không về nhà vì mưa nhỏ nên không cần ngoại lệ
         return !dnSleepy(this.bedJ, this.wakeJ, false);   // tới giờ ngủ: về nhà như thường
     }
     tryGoHome(force, rainRest) {   // rainRest: đang nghỉ theo nghề, chỉ vì mưa (không tìm được nhà / đường thì thôi, không ngủ ngoài trời)
@@ -6392,8 +6393,20 @@ class Bot {
         if (!ok) { this.jobRestIn = null; this.state = 'IDLE'; this.wait = 0.5; this.homeFail(); return; }
         this.state = 'SLEEP'; this.rest = null; this.sleepOut = false; this.homeFails = 0;   // ẩn trong nhà (không vẽ)
     }
+    // Đang trú mưa trong nhà (mưa nhỏ, chưa tới giờ ngủ) mà người chơi giao việc được phép làm khi mưa (trồng cây) => bước ra nhận việc.
+    //   Dùng chính tryOrderTask('rain') (29_orders) nên luật "việc nào làm được khi mưa" chỉ có một nơi. Kiểm 1,5 giây game / lần.
+    rainOrderOut() {
+        if (CWP.mode !== 'order' || !WEATHER.on || this.elder || this.boat || this.dying || this.job || this.girl !== undefined || this.sleepOut || this.jobRestIn) return false;
+        if (simClock < (this.rainOrdChk || 0)) return false; this.rainOrdChk = simClock + 1.5;
+        if (simClock < (this.inUntil || 0) || restOn(this) || !this.rainPlantOK(true)) return false;   // chỉ khi mưa nhỏ (tier 1), không tới giờ ngủ
+        this.state = 'IDLE';
+        if (!this.tryOrderTask('rain')) { this.state = 'SLEEP'; return false; }   // không có lệnh hợp: ở yên trong nhà
+        this.pop = 0.55; this.homeHouse = null; this.homeDoor = null; this.sleepOut = false; this.homing = false; this.rest = null; this.wait = 0;   // bước ra cửa, hiện dần (như nhánh ra khỏi nhà ở dưới)
+        return true;
+    }
     updateSleep(dt) {
         this.shelterT = simClock;   // mốc lần cuối còn ở trong nhà (trú mưa / ngủ): vừa bước ra khi mưa còn nhỏ thì chưa nhận việc ngay (xem findTask)
+        if (this.rainOrderOut()) return;   // đang trú mưa mà có lệnh người chơi hợp lệ thì bước ra nhận việc
         if (this.elder && this.elderAge >= this.elderLife) { this.gone = true; return; }   // mất trong giấc ngủ (đang ẩn trong nhà)
         const hs = this.homeHouse;
         const gone = !this.sleepOut && (!hs || grid[Math.floor(hs.x / TILE_SIZE)][Math.floor(hs.y / TILE_SIZE)].type !== TYPE_HOUSE);   // nhà bị dỡ => ra ngoài ngay
@@ -9197,50 +9210,110 @@ const _rw = (x0, y0, x1, y1) => [[x0 + 0.9, y0 + 0.9], [x1 - 0.9, y0 + 0.9], [x1
 const _rr = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 const _sw = (hw, k, s0, s1, yT, yB, ox, oy) => { ox = ox || 0; oy = oy || 0; const d = (s, y) => [hw + H3_DX * k * s + ox, y + H3_DY * k * s + oy]; return [d(s0, yT), d(s1, yT), d(s1, yB), d(s0, yB)]; };
 const _sh = (hw, yT, yB) => _sw(hw, 1, 0.32, 0.68, yT + 0.9, yB - 0.9);
+// (r59) hình dáng ô sáng khớp hình cửa sổ thật ở 06 / 07: tròn / elip (disc, ellipse), vòm (archPath), vòm trên tường hông (sideArchWin)
+const _ci = (cx, cy, rx, ry) => { const o = []; if (ry == null) ry = rx; for (let i = 0; i < 14; i++) { const a = i * TAU / 14; o.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return o; };
+const _ar = (x0, x1, yb, yt, ox, oy) => { ox = ox || 0; oy = oy || 0; const r = (x1 - x0) / 2, cx = (x0 + x1) / 2, o = [[x0 + ox, yb + oy], [x0 + ox, yt + r + oy]]; for (let i = 1; i < 8; i++) { const a = Math.PI + i * Math.PI / 8; o.push([cx + Math.cos(a) * r + ox, yt + r + Math.sin(a) * r + oy]); } o.push([x1 + ox, yt + r + oy], [x1 + ox, yb + oy]); return o; };
+const _swa = (hw, k, s0, s1, yb, yt, ox, oy) => {
+    ox = ox || 0; oy = oy || 0;
+    const sp = (s, y) => [hw + H3_DX * k * s + ox, y + H3_DY * k * s + oy];
+    const a = sp(s0, yb), b = sp(s1, yb), c = sp(s1, yt + 1.6), d = sp(s0, yt + 1.6), tp = sp((s0 + s1) / 2, yt);
+    const q = (p0, cp, p1, t) => [(1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * cp[0] + t * t * p1[0], (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * cp[1] + t * t * p1[1]];
+    const c1 = [tp[0] + (c[0] - tp[0]) * 0.2, tp[1] - 0.4], c2 = [tp[0] - (tp[0] - d[0]) * 0.2, tp[1] - 0.4];
+    const o = [a, b, c];
+    for (const t of [0.25, 0.5, 0.75]) o.push(q(c, c1, tp, t));
+    o.push(tp);
+    for (const t of [0.25, 0.5, 0.75]) o.push(q(tp, c2, d, t));
+    o.push(d); return o;
+};
+// r59: cửa sổ nhà thuyền = cửa sổ tròn đầu hồi (tâm (hx, -23,6K), r 1,8K) + cửa sổ mặt trước (x hx+2,4K..hx+8,8K, y -14K..-9,6K); hx = dịch ngang của nhà (S +16, E -20, W 0), K = SHED_K (cấp 1: 1,2; cấp 2: 1,38 ở 06 drawPierStatic)
+const _pierWins = (hx, K) => [_ci(hx, -23.6 * K, 1.8 * K), _rr(hx + 2.4 * K, -14 * K, hx + 8.8 * K, -9.6 * K)];
 Object.assign(WIN_DEFS, {
     hip: [_rw(-11.4, -11.5, -6.4, -5), _rw(6.4, -11.5, 11.4, -5), _sh(16, -11, -5)],
     tudor: [_rw(-3.2, -23.2, 3.2, -15.8), _rw(-11.6, -9.5, -6.4, -3.2), _sh(14, -9.5, -3.5), _sh(14, -23, -16)],
-    round: [_rr(-9.4, -14.7, -6.6, -10.9), _rr(6.6, -14.7, 9.4, -10.9)],
+    round: [_ci(-8, -12.8, 1.6, 2.3), _ci(8, -12.8, 1.6, 2.3)],   // r59: elip đúng cỡ kính (rx 1,6 / ry 2,3) thay cho ô chữ nhật nhỏ hơn
     barn: [_sw(20, 1.4, 0.18, 0.38, -10.5, -4), _sw(20, 1.4, 0.62, 0.82, -10.5, -4)],
-    dutch: [_rw(-5.4, -22.5, -2.6, -15.5), _rw(2.6, -22.5, 5.4, -15.5), _rw(-10.5, -9, -5.1, -3.6), _rw(5.6, -9, 10.4, -3.6), _rr(-1.6, -32.2, 1.6, -29),
-        _sw(12.5, 1.5, 0.18, 0.4, -10.4, -4), _sw(12.5, 1.5, 0.6, 0.82, -10.4, -4), _sw(12.5, 1.5, 0.18, 0.4, -21.4, -16.5), _sw(12.5, 1.5, 0.6, 0.82, -21.4, -16.5)],
-    church: [_rr(18.7, -23.9, 22.7, -9.9), _sw(17, 2.4, 0.105, 0.255, -18.4, -4.5, 7.7, -4.9), _sw(17, 2.4, 0.425, 0.575, -18.4, -4.5, 7.7, -4.9), _sw(17, 2.4, 0.745, 0.895, -18.4, -4.5, 7.7, -4.9),
-        _rr(-2.8, -28.3, 2.8, -22.7), _sw(9, 0.7, 0.22, 0.78, -24.4, -10)],
-    clock: [_rr(-1.9, -29, 1.9, -20), _sw(10, 0.8, 0.2, 0.8, -40.4, -26), _rr(-15.4, -19.6, -12, -9.6), _rr(20.4, -19.6, 24, -9.6), _rr(28.6, -19.6, 32.2, -9.6),
-        _sw(26, 2, 0.07, 0.21, -12.9, -4, 8.8, -5.6), _sw(26, 2, 0.31, 0.45, -12.9, -4, 8.8, -5.6), _sw(26, 2, 0.55, 0.69, -12.9, -4, 8.8, -5.6), _sw(26, 2, 0.79, 0.93, -12.9, -4, 8.8, -5.6)],
-    mill: [_rr(-1.5, -25.8, 1.5, -21), _rr(-1.5, -35.8, 1.5, -31)],
+    dutch: [_rw(-5.4, -22.5, -2.6, -15.5), _rw(2.6, -22.5, 5.4, -15.5), _rw(-10.5, -9, -5.1, -3.6), _rw(5.6, -9, 10.4, -3.6), _ci(0, -30.6, 2),
+        _swa(12.5, 1.5, 0.18, 0.4, -4, -12), _swa(12.5, 1.5, 0.6, 0.82, -4, -12), _swa(12.5, 1.5, 0.18, 0.4, -16.5, -23), _swa(12.5, 1.5, 0.6, 0.82, -16.5, -23)],
+    church: [_ar(11, 15, -5, -19, 7.7, -4.9), _swa(17, 2.4, 0.105, 0.255, -4.5, -20, 7.7, -4.9), _swa(17, 2.4, 0.425, 0.575, -4.5, -20, 7.7, -4.9), _swa(17, 2.4, 0.745, 0.895, -4.5, -20, 7.7, -4.9),
+        _ci(0, -25.5, 3.9), _swa(9, 0.7, 0.22, 0.78, -10, -26)],   // r59: cửa sổ hoa hồng tròn r 3,9 (kính của drawChurch3D) + cửa sổ vòm
+    clock: [_ar(-1.9, 1.9, -21, -30), _swa(12, 0.8, 0.2, 0.8, -32, -50), _ar(-24.2, -20.8, -4, -14, 8.8, -5.6), _ar(11.6, 15.2, -4, -14, 8.8, -5.6), _ar(19.8, 23.4, -4, -14, 8.8, -5.6),
+        _swa(26, 2, 0.07, 0.21, -4, -14.5, 8.8, -5.6), _swa(26, 2, 0.31, 0.45, -4, -14.5, 8.8, -5.6), _swa(26, 2, 0.55, 0.69, -4, -14.5, 8.8, -5.6), _swa(26, 2, 0.79, 0.93, -4, -14.5, 8.8, -5.6)],   // r59: cửa sổ tháp theo đúng thân tháp rộng 24 (tw 12) thay cho số cũ (hw 10)
+    mill: [_ar(-1.5, 1.5, -21, -25.8), _ar(-1.5, 1.5, -31, -35.8)],
     well: [],   // giếng: không có cửa sổ
-    tavern: [_rw(-15.5, -11.4, -9.3, -5.2), _rw(9.3, -11.4, 15.5, -5.2), _rw(-4, -22.2, 0, -17.2), _rw(1, -22.2, 5, -17.2)],
+    tavern: [_rw(-15.5, -11.4, -9.3, -5.2), _rw(9.3, -11.4, 15.5, -5.2), _rw(-4, -22.2, 0, -17.2), _rw(1, -22.2, 5, -17.2),
+        _sw(TV_HW, TV_K, 0.16, 0.34, -17, -11.5), _sw(TV_HW, TV_K, 0.66, 0.84, -17, -11.5),   // r59: 2 cửa sổ kính ấm trên tường hông (drawTavern3D) trước đây không sáng
+        _rr(H3_DX * TV_K * 0.18 - 2.2, -31.1, H3_DX * TV_K * 0.18 + 2.2, -26.5)],            // r59: cửa sổ mái (dormer)
     bakery: [_rw(-12.8, -13, -2.2, -6), _sw(15, 1.3, 0.34, 0.66, -14, -8.6)],   // lò bánh mì: cửa sổ tiệm + cửa sổ hông
     coop: [_rr(4.4, -11.2, 7.8, -7.8)],   // chuồng gà: cửa sổ nhỏ
     // chợ: cửa sổ hông (trên tường hông nghiêng; x1 = MK_X0 + MK_W * số gian, k = MK_K) + đèn lồng dưới mái che (mkLamps ở 06)
-    market: [_sw(MK_X0 + MK_W * 3, MK_K, 0.28, 0.72, -18, -9), ...mkLamps(3).map(([x, y]) => _rr(x - 1.3, y - 1.3, x + 1.3, y + 1.3))],
-    market2: [_sw(MK_X0 + MK_W * 2, MK_K, 0.28, 0.72, -18, -9), ...mkLamps(2).map(([x, y]) => _rr(x - 1.3, y - 1.3, x + 1.3, y + 1.3))],
-    lighthouse: [_rr(-4.4, -80.2, 4.4, -70.6), _rr(-1.1, -31.8, 1.1, -26.4), _rr(-1.1, -50.8, 1.1, -45.4)],   // hải đăng: buồng đèn + 2 khe sáng trên thân tháp
+    market: [_sw(MK_X0 + MK_W * 3, MK_K, 0.28, 0.72, -18, -9), ...mkLamps(3).map(([x, y]) => _ci(x, y, 1.5))],
+    market2: [_sw(MK_X0 + MK_W * 2, MK_K, 0.28, 0.72, -18, -9), ...mkLamps(2).map(([x, y]) => _ci(x, y, 1.5))],
+    lighthouse: [_rr(-4.6, -80.2, 4.6, -70.6), _rr(-1.1, -31.8, 1.1, -26.4), _rr(-1.1, -50.8, 1.1, -45.4)],   // hải đăng: buồng đèn + 2 khe sáng trên thân tháp
     // cầu tàu (drawPier3D ở 06): cửa sổ tròn đầu hồi + cửa sổ mặt trước của nhà thuyền (dịch theo hx của từng hướng: Nam +16, Đông -20, Tây 0) + đèn trên cột đầu cầu
     // (nhà thuyền vẽ x1.2 quanh chân nhà => toạ độ cửa sổ đã nhân 1.2; đèn đầu cầu không đổi)
-    pierS: [_rr(13.84, -30.48, 18.16, -26.16), _rr(18.88, -16.8, 26.56, -11.52), _rr(6, 64.1, 7.4, 66.9)],
-    pierE: [_rr(-22.16, -30.48, -17.84, -26.16), _rr(-17.12, -16.8, -9.44, -11.52), _rr(77.5, -4.9, 78.9, -2.1)],
-    pierW: [_rr(-2.16, -30.48, 2.16, -26.16), _rr(2.88, -16.8, 10.56, -11.52), _rr(-78.9, -4.9, -77.5, -2.1)]
+    pierS: _pierWins(16, 1.2).concat([_rr(6, 64.1, 7.4, 66.9)]),
+    pierE: _pierWins(-20, 1.2).concat([_rr(77.5, -4.9, 78.9, -2.1)]),
+    pierW: _pierWins(0, 1.2).concat([_rr(-78.9, -4.9, -77.5, -2.1)])
 });
 // cửa sổ sáng của công trình cấp 2 (thân cao hơn / cầu dài hơn => vài ô dời chỗ; khớp 06 drawChurch3D / drawClockHall3D, 07 drawWindmill3D, 06 jettyE / jettyS)
 const WIN_UP = {
-    church: [WIN_DEFS.church[0], WIN_DEFS.church[1], WIN_DEFS.church[2], WIN_DEFS.church[3], _rr(-2.8, -32.8, 2.8, -27.2), _sw(9, 0.7, 0.22, 0.78, -30.5, -10)],
-    clock: [WIN_DEFS.clock[0], _sw(10, 0.8, 0.2, 0.8, -54.4, -40)].concat(WIN_DEFS.clock.slice(2)),
-    mill: [_rr(-1.5, -29.8, 1.5, -25), _rr(-1.5, -42.8, 1.5, -38)]
+    church: [WIN_DEFS.church[0], WIN_DEFS.church[1], WIN_DEFS.church[2], WIN_DEFS.church[3], _ci(0, -30, 3.9), _swa(9, 0.7, 0.22, 0.78, -10, -32.12)],
+    clock: [WIN_DEFS.clock[0], _swa(12, 0.8, 0.2, 0.8, -46, -64)].concat(WIN_DEFS.clock.slice(2)),
+    mill: [_ar(-1.5, 1.5, -25, -29.8), _ar(-1.5, 1.5, -38, -42.8)]
 };
 (function () {   // đèn đầu cầu dời theo cầu dài thêm 50% (E +33, W -33 theo x; S +35,5 theo y)
     const sh = (pts, dx, dy) => pts.map(q => [q[0] + dx, q[1] + dy]);
-    WIN_UP.pierE = WIN_DEFS.pierE.map((p, i) => i === 2 ? sh(p, 33, 0) : p);
-    WIN_UP.pierW = WIN_DEFS.pierW.map((p, i) => i === 2 ? sh(p, -33, 0) : p);
-    WIN_UP.pierS = WIN_DEFS.pierS.map((p, i) => i === 2 ? sh(p, 0, 35.5) : p);
+    // r59: cấp 2 nhà thuyền vẽ x1,38 (SHED_K) => hai cửa sổ nhân theo 1,38 (trước đây giữ cỡ 1,2 nên ô sáng nhỏ và lệch)
+    WIN_UP.pierE = _pierWins(-20, 1.38).concat([sh(WIN_DEFS.pierE[2], 33, 0)]);
+    WIN_UP.pierW = _pierWins(0, 1.38).concat([sh(WIN_DEFS.pierW[2], -33, 0)]);
+    WIN_UP.pierS = _pierWins(16, 1.38).concat([sh(WIN_DEFS.pierS[2], 0, 35.5)]);
 })();
 function winsOf(hv) {
     if (!hv.wins) {
         const L = hv.old ? WIN_DEFS.old : ((hv.up === 2 && WIN_UP[hv.kind]) || WIN_DEFS[hv.kind] || WIN_DEFS.gable);
-        hv.wins = L.map(pts => { let cx = 0, cy = 0; for (const q of pts) { cx += q[0]; cy += q[1]; } return { pts, cx: cx / pts.length, cy: cy / pts.length }; });
+        hv.wins = L.map(pts => { let cx = 0, cy = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const q of pts) { cx += q[0]; cy += q[1]; if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; } return { pts, cx: cx / pts.length, cy: cy / pts.length, hx: (x1 - x0) / 2, hy: (y1 - y0) / 2 }; });
     }
     return hv.wins;
+}
+// ===== (r59) Cây phía trước che cửa sổ: lấy độ che từ kênh alpha của sprite cây (cùng vị trí / cỡ như lúc vẽ ở 16_render_world), ô nào bị tán cây phủ thì tối đi =====
+const TREE_COVER_DIM = 0.85;      // ô sáng bị che hoàn toàn vẫn còn 15% (ánh sáng lọt qua kẽ lá)
+const _treeAlpha = new WeakMap();
+function treeAlphaData(sp) {
+    let d = _treeAlpha.get(sp.c);
+    if (d === undefined) { try { d = sp.c.getContext('2d').getImageData(0, 0, sp.c.width, sp.c.height); } catch (e) { d = null; } _treeAlpha.set(sp.c, d); }
+    return d;
+}
+function treeSpriteSet() { for (const s of spriteSets.values()) return s; return null; }
+// Trả về mảng độ che 0..1 theo từng cửa sổ của nhà c; null nếu không có cây nào che.
+function windowCover(c, sc, W, set) {
+    try {
+        const T = [];
+        for (let gx = Math.max(0, c.x - 3); gx <= Math.min(GRID_W - 1, c.x + 3); gx++) for (let gy = c.y; gy <= Math.min(GRID_H - 1, c.y + 4); gy++) {
+            const t = grid[gx][gy];
+            if (t.type !== TYPE_TREE || t.sy <= c.sy || (typeof DMG !== 'undefined' && DMG[t.y * GRID_W + t.x])) continue;   // chỉ cây vẽ SAU nhà (nằm phía trước); cây đổ bỏ qua
+            const sp = set.trees[t.treeVar]; if (!sp) continue;
+            const k = t.treeSize * growScale(t.growth) * (t.treeVar === 40 ? SNOW_PINE_SCALE : 1), d = treeAlphaData(sp); if (!d) continue;
+            T.push({ t, sp, k, d, x0: t.sx + sp.l * k, y0: t.sy + sp.t * k });
+        }
+        if (!T.length) return null;
+        let any = false; const out = new Array(W.length);
+        for (let wi = 0; wi < W.length; wi++) {
+            const w = W[wi], cx = c.sx + w.cx * sc, cy = c.sy + w.cy * sc, hx = w.hx * sc * 0.5, hy = w.hy * sc * 0.5;
+            let sum = 0;
+            for (const [ox, oy] of [[0, 0], [-hx, 0], [hx, 0], [0, -hy], [0, hy]]) {
+                const px = cx + ox, py = cy + oy; let keep = 1;
+                for (const q of T) {
+                    const u = (px - q.x0) / (q.sp.w * q.k), v = (py - q.y0) / (q.sp.h * q.k);
+                    if (u < 0 || u >= 1 || v < 0 || v >= 1) continue;
+                    const a = q.d.data[(((v * q.d.height) | 0) * q.d.width + ((u * q.d.width) | 0)) * 4 + 3] / 255;
+                    keep *= 1 - a;
+                }
+                sum += 1 - keep;
+            }
+            out[wi] = sum / 5; if (out[wi] > 0.02) any = true;
+        }
+        return any ? out : null;
+    } catch (e) { return null; }
 }
 const glowSpr = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -9279,20 +9352,30 @@ function drawHouseLamps(z, lamp, night) {
         litAmt.push(a);
     }
     const full = z >= 0.6;
+    const occs = [];                              // occs[i]: độ che của cây phía trước cho từng cửa sổ của nhà i (undefined / null = không bị che)
     if (full) {                                   // ô cửa sổ sáng
         ctx.fillStyle = '#ffe08c';
+        const tset = treeSpriteSet();
+        const winPath = (c, sc, P) => {
+            ctx.moveTo(c.sx + P[0][0] * sc, c.sy + P[0][1] * sc);
+            for (let j = 1; j < P.length; j++) ctx.lineTo(c.sx + P[j][0] * sc, c.sy + P[j][1] * sc);
+            ctx.closePath();
+        };
         for (let i = 0; i < litHouses.length; i++) {
             const a = litAmt[i]; if (a < 0.02) continue;
             const c = litHouses[i], sc = cwUpScale(c), W = winsOf(houseHV(c));
-            ctx.globalAlpha = 0.92 * a;
-            ctx.beginPath();
-            for (const w of W) {
-                const P = w.pts;
-                ctx.moveTo(c.sx + P[0][0] * sc, c.sy + P[0][1] * sc);
-                for (let j = 1; j < P.length; j++) ctx.lineTo(c.sx + P[j][0] * sc, c.sy + P[j][1] * sc);
-                ctx.closePath();
+            const oc = tset ? windowCover(c, sc, W, tset) : null; occs[i] = oc;
+            if (!oc) {
+                ctx.globalAlpha = 0.92 * a;
+                ctx.beginPath();
+                for (const w of W) winPath(c, sc, w.pts);
+                ctx.fill();
+            } else {
+                for (let wi = 0; wi < W.length; wi++) {
+                    const al = 0.92 * a * (1 - TREE_COVER_DIM * oc[wi]); if (al < 0.01) continue;
+                    ctx.globalAlpha = al; ctx.beginPath(); winPath(c, sc, W[wi].pts); ctx.fill();
+                }
             }
-            ctx.fill();
         }
     }
     ctx.globalCompositeOperation = 'lighter';     // quầng sáng
@@ -9300,9 +9383,11 @@ function drawHouseLamps(z, lamp, night) {
         const a = litAmt[i]; if (a < 0.02) continue;
         const c = litHouses[i], sc = cwUpScale(c);
         if (full) {
-            const W = winsOf(houseHV(c)), gs = 17 * sc;
-            ctx.globalAlpha = 0.5 * a;
-            for (const w of W) ctx.drawImage(glowSpr, c.sx + w.cx * sc - gs / 2, c.sy + w.cy * sc - gs / 2, gs, gs);
+            const W = winsOf(houseHV(c)), gs = 17 * sc, oc = occs[i];
+            for (let wi = 0; wi < W.length; wi++) {
+                const w = W[wi]; ctx.globalAlpha = 0.5 * a * (oc ? 1 - TREE_COVER_DIM * oc[wi] : 1);
+                ctx.drawImage(glowSpr, c.sx + w.cx * sc - gs / 2, c.sy + w.cy * sc - gs / 2, gs, gs);
+            }
             ctx.globalAlpha = 0.3 * a;            // vệt sáng trước cửa
             ctx.drawImage(glowSpr, c.sx - 24 * sc, c.sy - 5 * sc, 48 * sc, 16 * sc);
         } else {
@@ -10183,7 +10268,7 @@ function drawBot(b, x, y, time) {
     const NM_M = ['Oliver', 'Jack', 'Harry', 'Leo', 'Oscar', 'Charlie', 'Henry', 'Theo', 'Arthur', 'Freddie', 'Alfie', 'Archie', 'Max', 'Toby', 'Felix', 'Hugo', 'Jasper', 'Milo', 'Ethan', 'Noah', 'Lucas', 'Sam', 'Ben', 'Finn', 'Owen', 'Elliot', 'George', 'Louis', 'Rory', 'Ted', 'Albert', 'Walter', 'Adam', 'Alan', 'Alex', 'Andy', 'Angus', 'Ash', 'Austin', 'Barney', 'Bear', 'Benji', 'Billy', 'Blake', 'Bobby', 'Brandon', 'Brody', 'Bruce', 'Caleb', 'Callum', 'Carl', 'Cedric', 'Chester', 'Clark', 'Clyde', 'Colin', 'Connor', 'Dan', 'Dean', 'Dennis', 'Derek', 'Dylan', 'Eddie', 'Edgar', 'Edmund', 'Eli', 'Elton', 'Emmett', 'Eric', 'Ernest', 'Evan', 'Ezra', 'Fergus', 'Frank', 'Fred', 'Gabe', 'Gary', 'Gavin', 'Gil', 'Glen', 'Gordon', 'Graham', 'Greg', 'Guy', 'Hal', 'Hank', 'Harvey', 'Hector', 'Howard', 'Ian', 'Ivan', 'Jacob', 'Jake', 'Jamie', 'Jared', 'Jay', 'Jesse', 'Jim', 'Joel', 'John', 'Jonah', 'Joe', 'Jude', 'Julian', 'Kai', 'Keith', 'Ken', 'Kevin', 'Kit', 'Kyle', 'Lance', 'Larry', 'Lawrence', 'Lewis', 'Liam', 'Logan', 'Luke', 'Malcolm', 'Marcus', 'Mark', 'Martin', 'Matt', 'Maurice', 'Miles', 'Mitch', 'Nate', 'Ned', 'Neil', 'Nick', 'Noel', 'Norman', 'Oakley', 'Otis', 'Pablo', 'Pat', 'Paul', 'Percy', 'Pete', 'Phil', 'Quentin', 'Ralph', 'Randy', 'Ray', 'Reggie', 'Rex', 'Rhys', 'Rick', 'Robin', 'Rodney', 'Roy', 'Rufus', 'Russell', 'Ryan', 'Sean', 'Seth', 'Simon', 'Stan', 'Steve', 'Stuart', 'Tim'];
     const NM_F = ['Olivia', 'Amelia', 'Isla', 'Ava', 'Lily', 'Ivy', 'Rosie', 'Grace', 'Ella', 'Poppy', 'Daisy', 'Ruby', 'Mia', 'Evie', 'Willow', 'Hazel', 'Florence', 'Alice', 'Emily', 'Sophie', 'Clara', 'Maisie', 'Luna', 'Nora', 'Iris', 'Matilda', 'Bella', 'Holly', 'Penny', 'Molly', 'Edith', 'Mabel', 'Abby', 'Ada', 'Agnes', 'Aimee', 'Alba', 'Alma', 'Amber', 'Amy', 'Anna', 'Annie', 'April', 'Aria', 'Ashley', 'Audrey', 'Aurora', 'Beth', 'Betty', 'Blair', 'Bonnie', 'Brenda', 'Brooke', 'Callie', 'Camille', 'Carla', 'Carol', 'Cassie', 'Cece', 'Celia', 'Chloe', 'Cindy', 'Claire', 'Cora', 'Cory', 'Dahlia', 'Dana', 'Dawn', 'Debbie', 'Dora', 'Eden', 'Edna', 'Elena', 'Eliza', 'Ellie', 'Elsa', 'Emma', 'Erin', 'Esme', 'Esther', 'Eve', 'Faye', 'Fern', 'Fiona', 'Freya', 'Gemma', 'Gina', 'Gwen', 'Hannah', 'Heidi', 'Helen', 'Hilda', 'Hope', 'Ida', 'Imogen', 'Ingrid', 'Irene', 'Jade', 'Jane', 'Janet', 'Jean', 'Jenny', 'Jess', 'Jill', 'Joan', 'Josie', 'Joy', 'Julia', 'Juno', 'June', 'Kate', 'Katie', 'Kay', 'Kira', 'Lacey', 'Laura', 'Layla', 'Leah', 'Lena', 'Lila', 'Lilac', 'Lois', 'Lola', 'Lottie', 'Lucy', 'Lydia', 'Mae', 'Maggie', 'Maple', 'Marge', 'Maria', 'Martha', 'Maya', 'Megan', 'Mina', 'Misty', 'Nancy', 'Naomi', 'Nell', 'Nina', 'Olive', 'Opal', 'Paige', 'Pearl', 'Peggy', 'Phoebe', 'Piper', 'Polly', 'Rachel', 'Rani', 'Rhea', 'Rita', 'Rose', 'Ruth', 'Sadie', 'Sally', 'Sara', 'Sasha', 'Stella', 'Susie'];
     const NM_ALL = NM_M.concat(NM_F);
-    const TRAIT_TXT = { chat: 'hay chuyện trò', warm: 'thích sưởi lửa', watch: 'mê xem vẽ', love: 'lãng mạn', shore: 'thích ra bờ nước', fish: 'mê câu cá' };
+    const TRAIT_TXT = { chat: 'hay chuyện trò', warm: 'thích sưởi lửa', watch: 'thích tranh vẽ', love: 'lãng mạn', shore: 'thích ra bờ nước', fish: 'mê câu cá' };
     const REST_TXT = { sit: 'Ngồi nghỉ', stand: 'Đứng thở, ngắm quanh', paint: 'Đứng vẽ tranh', chess: 'Chơi cờ', qi: 'Tập dưỡng sinh', warm: 'Ngồi sưởi lửa' };
     function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
     function nameOf(seed, fem) { if (seed >= PBASE) { const P = PERS[seed - PBASE]; if (P) return P.n; } const R = rng(seed), L = fem === true ? NM_F : fem === false ? NM_M : NM_ALL; return L[(R() * L.length) | 0]; }   // chỉ TÊN (kho 160 tên / giới); trùng tên được tránh lúc sinh người mới nhờ cwSeedFree
@@ -10305,7 +10390,7 @@ function drawBot(b, x, y, time) {
     const kinSet = (a, b, v) => { (KIN[a] = KIN[a] || {})[b] = Math.max((KIN[a] || {})[b] || 0, v); (KIN[b] = KIN[b] || {})[a] = Math.max(KIN[b][a] || 0, v); };
     for (const P of PERS) { if (P.lover && PIDX[P.lover]) kinSet(P.n, P.lover, 2); for (const q of P.pals) if (PIDX[q]) kinSet(P.n, q, 1); }
     const PJOB = { hunter: 'hunter', sailor: 'fisher', post: 'postman' };
-    const PTXT = { hunter: 'thợ săn', sailor: 'thủy thủ', post: 'người đưa thư', chat: 'hay chuyện trò', warm: 'thích sưởi lửa', watch: 'mê xem vẽ', love: 'lãng mạn', shore: 'thích bờ nước', fish: 'mê câu cá', sing: 'hay hát', dance: 'thích múa', chess: 'mê cờ', lost: 'hay đi lạc', cold: 'quen vùng lạnh', coast: 'quen ven biển' };
+    const PTXT = { hunter: 'thợ săn', sailor: 'thủy thủ', post: 'người đưa thư', chat: 'hay chuyện trò', warm: 'thích sưởi lửa', watch: 'thích tranh vẽ', love: 'lãng mạn', shore: 'thích bờ nước', fish: 'mê câu cá', sing: 'hay hát', dance: 'thích múa', chess: 'mê cờ', lost: 'ham chơi', cold: 'quen vùng lạnh', coast: 'thích gần biển' };
     const perOfSeed = (s) => (s >= PBASE && PERS[s - PBASE]) || null;
     window.cwPer = function (b) { try { return perOfSeed(b.tr.seed); } catch (e) { return null; } };
     window.cwHas = function (b, tag) { const P = window.cwPer(b); return !!(P && P.tags.has(tag)); };
@@ -10375,7 +10460,7 @@ function drawBot(b, x, y, time) {
     function traitTxt(b) {
         const tr = trait(b), e = Object.keys(TRAIT_TXT).map(k => [k, tr[k]]).sort((p, q) => q[1] - p[1]);
         const P = window.cwPer(b);
-        if (P) { const L = []; for (const t of P.tags) if (PTXT[t] && t !== 'cold' && t !== 'coast') L.push(PTXT[t]); if (P.tags.has('cold')) L.push(PTXT.cold); else if (P.tags.has('coast')) L.push(PTXT.coast); if (P.lover) L.push('thầm thích ' + P.lover); return L.slice(0, 4).join(', '); }
+        if (P) { const L = []; for (const t of P.tags) if (PTXT[t] && !PJOB[t] && t !== 'cold' && t !== 'coast') L.push(PTXT[t]); if (P.tags.has('cold')) L.push(PTXT.cold); else if (P.tags.has('coast')) L.push(PTXT.coast); if (P.lover) L.push('mến ' + P.lover); if (L.length) return L.slice(0, 4).join(', '); }
         return TRAIT_TXT[e[0][0]] + (e[1][1] >= 1.3 ? ', ' + TRAIT_TXT[e[1][0]] : '');
     }
     let el = null, cur = null, raf = 0;
@@ -17679,9 +17764,12 @@ const FEST = { cur: null, doneJ: -1, chk: 0, fire: null, fireT: 0, warned: false
 // TẾT TRUNG THU (rước đèn lồng): 90 phút game một lần, lần đầu ở phút 90, kéo dài ~5 phút (tập trung tối đa 45s + 255s). Ở bãi trống giữa làng lớn nhất;
 //   trẻ em cầm đèn ông sao đi thành vòng rước quanh sân (festMoonWalk), người lớn cầm đèn lồng đỏ (vẽ ở 33_village_life), cuối hội cả làng thả đèn trời.
 const MOON_T0 = 5400, MOON_PERIOD = 5400, MOON_STAY = 255, MOON_LATE = 600, MOON_MIN_POP = 8;
-// Trung thu: TRẺ EM là số đông. Người lớn + người già tối đa 1/3 số người dự (= nửa số bé). Mời mọi bé đi được (không giới hạn bán kính, gần trước), tối đa MOON_KIDS_MAX;
-//   cần >= MOON_MIN_KIDS bé. Chưa đủ ~70% số bé đang thức (MOON_KID_FRAC) thì chờ tới khi bé dậy; quá MOON_KID_WAIT giây sau mốc thì bỏ điều kiện này.
+// Trung thu: TRẺ EM đi đầu, huy động TỐI ĐA (mọi bé đi được, gần trước, tối đa MOON_KIDS_MAX; cần >= MOON_MIN_KIDS bé). Tổng số người dự nhắm tới MOON_TARGET_FRAC (80%) dân đảo, tối đa MOON_TOTAL_MAX;
+//   phần còn THIẾU sau khi đã có đủ bé thì bù bằng NGƯỜI GIÀ trước (gần trước), rồi tới NGƯỜI LỚN (gần trước), tối thiểu MOON_MIN_ADULT người lớn/già để còn thả đèn. Chưa đủ ~70% số bé đang thức
+//   (MOON_KID_FRAC) thì chờ tới khi bé dậy; quá MOON_KID_WAIT giây sau mốc thì bỏ điều kiện này. Người đang làm việc xong việc rồi đi (chờ tập trung MOON_GATHER);
+//   bé / người rảnh hoặc thức dậy muộn sau khi hội mở được gọi thêm (festMoonJoin, bé trước) cho tới khi đủ. Người làm nghề (thợ săn / ngư dân / đưa thư) vẫn làm việc như các lễ hội khác.
 const MOON_KIDS_MAX = 60, MOON_MIN_KIDS = 3, MOON_KID_FRAC = 0.7, MOON_KID_WAIT = 300;
+const MOON_TARGET_FRAC = 0.8, MOON_TOTAL_MAX = 70, MOON_MIN_ADULT = 6, MOON_GATHER = 90, MOON_JOIN_EVERY = 4;   // Trung thu: nhắm 80% dân đảo dự (tối đa 70 người, bé tính trước) · ít nhất 6 người lớn/già · chờ tập trung 90s · 4s một lượt gọi thêm
 function festCellFree(x, y) {
     if (x < 2 || y < 2 || x >= GRID_W - 2 || y >= GRID_H - 2) return false;
     const c = grid[x][y], i = y * GRID_W + x;
@@ -17757,7 +17845,7 @@ function festStart(kind, j) {
     const dist = o => Math.hypot(o.x - x, o.y - y);
     const ad = bots.filter(b => !b.gone && !b.dying && !b.boat && !b.job && !b.homing && !b.isWisher && b.state !== 'SLEEP' && (b.pop === undefined || b.pop >= 1));
     const kcAll = kids.filter(k => !k.gone && !k.lost && k.state !== 'SLEEP' && !(k.state === 'GO' && k.next === 'SLEEP') && k.pop >= 1 && !k.dnc && !k.fest && !dnSleepy(k.bedJ, k.wakeJ, true));
-    if (kind === 'moon') return festStartMoon(site, plaza, x, y, want, ad, kcAll, j, dist);   // Trung thu: nhánh riêng (trẻ em là số đông)
+    if (kind === 'moon') return festStartMoon(site, plaza, x, y, want, ad, kcAll, j, dist);   // Trung thu: nhánh riêng (bé trước, bù người già rồi người lớn)
     const kc = kcAll.filter(k => walkClear(k.x, k.y, x, y));
     const cand = ad.sort((a, b) => dist(a) - dist(b)).slice(0, want);              // người lớn / già gần nhất cho đủ 80% tối đa 30
     const kk = kc.sort((a, b) => dist(a) - dist(b)).slice(0, FEST_KIDS_MAX);       // trẻ em: mời hết các bé đi tới được (tối đa 24)
@@ -17772,20 +17860,23 @@ function festStart(kind, j) {
     for (const k of kk) { k.fest = { F, on: false, tries: 0, hopT: 1 }; if (!k.festGo()) k.fest = null; }   // bé đi thẳng tới chỗ lễ hội
     return true;
 }
-function festStartMoon(site, plaza, x, y, want, ad, kc, j, dist) {   // Tết Trung thu: bé đông, người lớn / già <= 1/3 tổng số người dự
+function festStartMoon(site, plaza, x, y, want, ad, kc, j, dist) {   // Tết Trung thu: huy động tối đa bé trước, thiếu thì bù người già rồi người lớn cho đủ F.target (tham số want không còn dùng)
     const nKids = kids.filter(k => !k.gone && k.pop >= 1).length;
     const late = simClock - (MOON_T0 + j * MOON_PERIOD) > MOON_KID_WAIT;
     if (kc.length < MOON_MIN_KIDS) return false;
     if (!late && kc.length < Math.ceil(MOON_KID_FRAC * nKids)) return false;   // đa số bé đang ngủ / bận: chờ thêm (festTick thử lại sau 10s)
     const F = { kind: 'moon', j, x, y, t: 0, ph: 'gather', people: [], kids: [], dance: 1.5, fire: null, spots: null, n: 0, plaza, bub: 0, nudge: 0, dead: false, fx: 3, finale: false };
-    F.spots = festMakeSpots(site, want);
+    F.spots = festMakeSpots(site, MOON_TOTAL_MAX); F.gather = MOON_GATHER;
     FEST.cur = F;
     kc.sort((a, b) => dist(a) - dist(b));                                       // gần trước, không giới hạn bán kính; bé nào không đi tới được (festGo = false) thì bỏ qua
-    for (const k of kc) { if (F.kids.length >= MOON_KIDS_MAX) break; k.fest = { F, on: false, tries: 0, hopT: 1 }; if (k.festGo()) F.kids.push(k); else k.fest = null; }
+    for (const k of kc) { if (F.kids.length >= MOON_KIDS_MAX) break; k.festF = F; k.festN = 1; k.fest = { F, on: false, tries: 0, hopT: 1 }; if (k.festGo()) F.kids.push(k); else k.fest = null; }
     if (F.kids.length < MOON_MIN_KIDS) { festEnd(F); return false; }
-    const nAd = Math.min(want, Math.floor(F.kids.length / 2));                  // người lớn + già <= 1/3 tổng: a / (a + k) <= 1/3  <=>  a <= k / 2
-    F.people = ad.sort((a, b) => dist(a) - dist(b)).slice(0, nAd);
-    for (const b of F.people) { b.fest = { F, spot: null, on: false, go: false }; if (b.state === 'IDLE' && b.wait > 0 && !b.assignedCell) b.wait = 0; }
+    // bé đã có F.kids.length; phần còn thiếu để đủ số lượng bù bằng NGƯỜI GIÀ trước rồi NGƯỜI LỚN (đều gần sân trước). Người đã tới giờ ngủ riêng thì không mời (họ sẽ về nhà, mời cũng không tới)
+    const adOK = ad.filter(b => !dnSleepy(b.bedJ, b.wakeJ, false));
+    F.target = Math.min(MOON_TOTAL_MAX, Math.ceil(MOON_TARGET_FRAC * (bots.length + nKids)));
+    const nAd = Math.min(adOK.length, F.spots.length, Math.max(MOON_MIN_ADULT, F.target - F.kids.length));
+    F.people = adOK.sort((a, b) => ((b.elder ? 1 : 0) - (a.elder ? 1 : 0)) || dist(a) - dist(b)).slice(0, nAd);
+    for (const b of F.people) { b.festF = F; b.fest = { F, spot: null, on: false, go: false }; if (b.state === 'IDLE' && b.wait > 0 && !b.assignedCell) b.wait = 0; }
     return true;
 }
 function festEnd(F) {
@@ -17807,15 +17898,16 @@ function festUpdate(F, dt) {
     F.people = F.people.filter(b => b.fest && b.fest.F === F && !b.gone && !b.dying);
     F.kids = F.kids.filter(k => k.fest && k.fest.F === F && !k.gone && kids.includes(k));
     const all = F.people.length + F.kids.length;
-    const stay = F.stay || FEST_STAY;
-    if (WEATHER.tier > 0 || all < 3 || F.t > FEST_GATHER + stay + 90) { festEnd(F); return; }
+    const stay = F.stay || FEST_STAY, gat = F.gather || FEST_GATHER;
+    if (WEATHER.tier > 0 || all < 3 || F.t > gat + stay + 90) { festEnd(F); return; }
     let here = 0; for (const b of F.people) if (b.fest.on) here++; for (const k of F.kids) if (k.fest.on) here++;
     if ((F.nudge -= dt) <= 0) {   // 2s một lần gọi những người đang ngồi rảnh về dự (người đang đánh cờ / dưỡng sinh / hẹn hò / trò chuyện thì để xong rồi đi)
         F.nudge = 2;
         for (const b of F.people) if (!b.fest.on && !b.fest.go && b.state === 'IDLE' && b.wait > 0 && !b.assignedCell && !b.chs && !b.qg && !b.dat && !b.cht) b.wait = 0;
     }
+    if (F.kind === 'moon') festMoonJoin(F, dt);   // Trung thu: gọi thêm người lớn vừa rảnh / vừa thức dậy
     if (F.ph === 'gather') {
-        if (here >= Math.ceil(all * FEST_ARRIVE) || F.t >= FEST_GATHER) {
+        if (here >= Math.ceil(all * FEST_ARRIVE) || F.t >= gat) {
             if (here < 3) { festEnd(F); return; }
             F.ph = 'on'; F.t = 0; F.n = here;
             try { if (window.cwJingle && gameSpeed < 10) window.cwJingle(F.kind); } catch (e) { }   // đoạn nhạc hiệu 3-5 giây khi lễ hội bắt đầu (04_audio)
@@ -17831,7 +17923,8 @@ function festUpdate(F, dt) {
     else if ((F.dance -= dt) <= 0) { F.dance = 1.5; festDanceStart(F); }   // bé nhảy múa (1,5s thử gom một nhóm mới)
     // NGƯỜI LỚN: thả đèn trời (đêm lửa trại mùa đông) / bóng bay (hội hoa anh đào); 24s cuối cả làng cùng thả
     const adOn = F.people.filter(b => b.fest.on && !b.gone);
-    if ((F.fx -= dt) <= 0 && adOn.length) { F.fx = FEST_FX_EVERY[0] + Math.random() * (FEST_FX_EVERY[1] - FEST_FX_EVERY[0]); festFxRelease(F, adOn[(Math.random() * adOn.length) | 0], 0); }
+    // Trung thu đông người: thả đèn dày hơn (khoảng cách thả nhân 8 / số người đang dự, tối thiểu x0,4 => nhanh gấp ~2,5 lần)
+    if ((F.fx -= dt) <= 0 && adOn.length) { F.fx = (FEST_FX_EVERY[0] + Math.random() * (FEST_FX_EVERY[1] - FEST_FX_EVERY[0])) * (F.kind === 'moon' ? Math.max(0.4, Math.min(1, 8 / adOn.length)) : 1); festFxRelease(F, adOn[(Math.random() * adOn.length) | 0], 0); }
     if (!F.finale && F.t >= stay - FEST_FINALE && adOn.length >= 3) {
         F.finale = true;
         adOn.forEach((b, i) => festFxRelease(F, b, 0.15 + i * 0.35 + Math.random() * 0.4));
@@ -17843,6 +17936,23 @@ function festUpdate(F, dt) {
         if (on.length) { const b = on[(Math.random() * on.length) | 0], ks = F.kind === 'winter' ? ['note', 'heart', 'snow', 'note'] : F.kind === 'moon' ? ['note', 'heart', 'note'] : ['heart', 'note', 'sun', 'heart']; b.bub = { k: ks[(Math.random() * ks.length) | 0], t: 2.8, d: 2.8 }; }
     }
     if (F.t >= stay) festEnd(F);
+}
+function festMoonJoin(F, dt) {   // Trung thu: mỗi MOON_JOIN_EVERY giây gọi thêm người: BÉ rảnh trước (mọi bé đi được), rồi thiếu thì bù NGƯỜI GIÀ → NGƯỜI LỚN cho tới khi đủ F.target. Mỗi người chỉ được gọi 1 lần / lễ hội (bé thử tối đa 3 lần) để người không tới được không chặn người khác
+    if ((F.join = (F.join || 0) - dt) > 0) return; F.join = MOON_JOIN_EVERY;
+    if (F.ph === 'on' && F.t > (F.stay || FEST_STAY) - 40) return;   // sắp hết hội thì thôi
+    const dist = o => Math.hypot(o.x - F.x, o.y - F.y);
+    const kc = kids.filter(k => !k.gone && !k.lost && k.state !== 'SLEEP' && !(k.state === 'GO' && k.next === 'SLEEP') && k.pop >= 1 && !k.dnc && !k.fest && !dnSleepy(k.bedJ, k.wakeJ, true) && (k.festF !== F || (k.festN | 0) < 3));
+    kc.sort((a, b) => dist(a) - dist(b));
+    for (const k of kc.slice(0, 6)) {
+        if (F.kids.length >= MOON_KIDS_MAX) break;
+        if (k.festF !== F) { k.festF = F; k.festN = 0; } k.festN++;
+        k.fest = { F, on: false, tries: 0, hopT: 1 }; if (k.festGo()) F.kids.push(k); else k.fest = null;
+    }
+    const room = Math.min((F.target || 0) - (F.people.length + F.kids.length), F.spots.length - F.people.length, MOON_TOTAL_MAX - F.people.length - F.kids.length), need = Math.max(room, MOON_MIN_ADULT - F.people.length);
+    if (need < 1 || F.people.length >= F.spots.length) return;
+    const c = bots.filter(b => b.festF !== F && !b.fest && !b.gone && !b.dying && !b.boat && !b.job && !b.homing && !b.isWisher && b.state !== 'SLEEP' && (b.pop === undefined || b.pop >= 1) && !dnSleepy(b.bedJ, b.wakeJ, false));
+    c.sort((a, b) => ((b.elder ? 1 : 0) - (a.elder ? 1 : 0)) || dist(a) - dist(b));   // người già trước, rồi người lớn
+    for (const b of c.slice(0, Math.min(need, 4))) { b.festF = F; b.fest = { F, spot: null, on: false, go: false }; F.people.push(b); if (b.state === 'IDLE' && b.wait > 0 && !b.assignedCell) b.wait = 0; }
 }
 function festMoonWalk(F, dt) {   // rước đèn: bé đang đứng ở sân thì 2-3s lại bước tới điểm kế tiếp trên vòng tròn quanh tâm (ai cũng đi cùng chiều => thành đoàn rước)
     if ((F.walk = (F.walk || 0) - dt) > 0) return; F.walk = 0.8;
@@ -19804,6 +19914,26 @@ function botActivity0(b) {
     if (histBtn) histBtn.addEventListener('click', (e) => { e.stopPropagation(); setHist(!hist.classList.contains('show')); });
     const uiLayer = document.getElementById('ui-layer');
     new MutationObserver(() => { if (uiLayer.classList.contains('collapsed')) { setOpen(false); setHist(false); setStar(false); } }).observe(uiLayer, { attributes: true, attributeFilter: ['class'] });   // đóng menu = đóng luôn hai bảng
+    // Bảng 🌿 tự thu gọn sau 10 giây kể từ lúc mở (thu gọn bằng cách bấm nút 🌿 đúng như người chơi, nên mọi xử lý đi kèm vẫn chạy).
+    //   Nếu lúc hết giờ đang mở ⚙️ / 📜 / ⭐ / 🏆 thì dời, đợi thêm 10 giây (tránh đóng sập bảng người chơi đang đọc).
+    {
+        const AUTO_COLLAPSE_MS = 10000, tg = document.getElementById('hud-toggle');
+        let acT = 0, wasOpen = !uiLayer.classList.contains('collapsed');
+        const busy = () => panel.classList.contains('show') || (hist && hist.classList.contains('show')) || (starP && starP.classList.contains('show')) || !!document.querySelector('#cw-aw.show');
+        const arm = () => { clearTimeout(acT); acT = setTimeout(fire, AUTO_COLLAPSE_MS); };
+        function fire() {
+            if (uiLayer.classList.contains('collapsed')) return;
+            if (busy()) { arm(); return; }
+            if (tg) tg.click();
+            if (!uiLayer.classList.contains('collapsed')) { uiLayer.classList.add('collapsed'); if (tg) tg.setAttribute('aria-expanded', 'false'); }   // phòng khi nút 🌿 không phản hồi
+        }
+        new MutationObserver(() => {
+            const open = !uiLayer.classList.contains('collapsed');
+            if (open && !wasOpen) arm(); else if (!open) clearTimeout(acT);
+            wasOpen = open;
+        }).observe(uiLayer, { attributes: true, attributeFilter: ['class'] });
+        if (wasOpen) arm();
+    }
     closeBtn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(false); });
     if (histClose) histClose.addEventListener('click', (e) => { e.stopPropagation(); setHist(false); });
     panel.addEventListener('click', (e) => e.stopPropagation());
@@ -20275,6 +20405,7 @@ function cwpAnchor(sx, sy) {
 }
 function cwpSetTool(id, quiet) {
     if (!CWP.active || !CWP_TOOLS.some(t => t.id === id) || (CWP.mode === 'order' && id === 'walk')) return;
+    if (!cwpToolShown(id)) return;   // nút đang ẩn (Lấn biển khi đảo đã mở hết / Nâng cấp khi chưa 4★) thì không chọn được
     if (id === 'seat' && !seatToolOK()) return;   // chưa mở rộng hết đảo: không chọn được (cả phím 5)
     cwpRMClose(); cwpKpClose(); CWP.tool = id; CWP.prev = null; ordArea = null; cwpTbtnSync(); ordToolSync();
     if (CWP.assist) CWP.assistT = performance.now();   // // //
@@ -20299,7 +20430,7 @@ function cwpToolsInit() {
     document.head.appendChild(st);
     cwpBarEl = document.createElement('div'); cwpBarEl.id = 'cwp-bar';
     cwpBarEl.innerHTML = CWP_TOOLS.map(t => '<button type="button" class="cwp-tb' + (t.id === 'walk' ? ' on' : '') + '" data-t="' + t.id + '" title="' + t.name + ' (phím ' + t.key + ')"><span class="i">' + t.ico + '</span><span>' + t.name + '</span><span class="bd"></span>' + (t.key ? '<span class="k">' + t.key + '</span>' : '') + '</button>').join('') +
-        '<div class="cwp-cap">Phím <b>1</b>–<b>7</b> hoặc <b>Shift + cuộn chuột</b> để đổi công cụ</div>';   // máy tính: số phím ở góc mỗi nút + dòng chú thích nhỏ dưới thanh (cảm ứng: ẩn)
+        '<div class="cwp-cap">Phím <b>1</b>–<b class="kmax">5</b> hoặc <b>Shift + cuộn chuột</b> để đổi công cụ</div>';   // máy tính: số phím ở góc mỗi nút + dòng chú thích nhỏ dưới thanh (cảm ứng: ẩn)
     { const s2 = document.createElement('style');
       s2.textContent = 'body:not(.cwp-touch) #cwp-bar{padding-bottom:19px}body:not(.cwp-touch) #cwp-bar.nocap{padding-bottom:6px}.cwp-tb .k{position:absolute;left:5px;bottom:3px;min-width:11px;padding:0 2px;border-radius:4px;background:rgba(60,50,30,.08);font:700 9px/12px ui-monospace,monospace;color:inherit;opacity:.6}.cwp-tb.on .k{background:rgba(255,255,255,.22);opacity:.85}' +
           '.cwp-cap{position:absolute;left:4px;right:4px;bottom:4px;text-align:center;white-space:nowrap;overflow:hidden;font:500 10px/12px "Segoe UI",Tahoma,sans-serif;color:#6b6b5a;pointer-events:none}.cwp-cap b{font-weight:700;color:#4e7a57}' +
@@ -20322,10 +20453,11 @@ function cwpToolsInit() {
     window.addEventListener('keydown', (e) => {
         if (!CWP.active || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
         const t = e.target && e.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA') return;
-        const tool = CWP_TOOLS.find(x => x.key === e.key);
+        const tool = CWP_TOOLS.find(x => x.key === e.key && cwpToolShown(x.id));
         if (tool) { cwpKeysLearned(); cwpSetTool(tool.id); if (CWP.mode === 'order' && CWP.mouse && !CWP.touchUI) ordAssist(true, { x: CWP.mouse.sx, y: CWP.mouse.sy }); }   // bấm phím công cụ cũng hiện ô + thanh
         else if (e.key === 'Escape') { ordArea = null; ordAssist(false); if (CWP.rm) cwpRMClose(); }   // Esc: đóng menu nhanh / bỏ vùng đang kéo
     });
+    cwpToolVis();
     cwpTouchInit();
     const cv = document.getElementById('gameCanvas');
     if (cv) cv.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { CWP.prev = null; CWP.mouse = null; } });
@@ -20421,6 +20553,26 @@ function cwHeartsSync() {
 }
 // Hành động nào hiện KHÔNG làm được ở bất kỳ ô nào theo luật vị trí / thời điểm (không tính tim: hết tim xử lý riêng ở cwpToolAfford, để vẫn xem trước được ô).
 //   Chế độ TIM (PLAYER_HEARTS, 28_player_check_touch): tim là giới hạn duy nhất => không làm mờ nút Xây nhà theo hãm đầu game nữa.
+// Nút nào được HIỆN trên thanh: Lấn biển (6) tự ẩn khi đảo đã mở rộng hết; Nâng cấp chỉ hiện từ khi đảo đạt 4★ (cwStar.peak dính, không tụt lại).
+//   Phím của Nâng cấp: 6 khi Lấn biển đang ẩn (đảo đã mở hết), 7 khi Lấn biển còn hiện (phòng khi đạt 4★ mà đảo chưa mở hết).
+function cwpToolShown(id) {
+    if (id === 'expand') return cwExpandLeft();
+    if (id === 'upgrade') return !!(window.cwUpUnlocked && window.cwUpUnlocked());
+    return true;
+}
+function cwpToolVis() {
+    if (!cwpBarEl) return;
+    const up = CWP_TOOLS.find(t => t.id === 'upgrade'); if (up) up.key = cwpToolShown('expand') ? '7' : '6';
+    let last = 0;
+    for (const t of CWP_TOOLS) {
+        const b = cwpBarEl.querySelector('.cwp-tb[data-t="' + t.id + '"]'); if (!b) continue;
+        const sh = cwpToolShown(t.id); if (b.style.display !== (sh ? '' : 'none')) b.style.display = sh ? '' : 'none';
+        if (!sh) continue;
+        if (t.key) { b.title = t.name + ' (phím ' + t.key + ')'; const k = b.querySelector('.k'); if (k && k.textContent !== t.key) k.textContent = t.key; last = Math.max(last, +t.key || 0); }
+    }
+    const km = cwpBarEl.querySelector('.cwp-cap .kmax'); if (km && last && km.textContent !== String(last)) km.textContent = last;
+    if (CWP.tool && !cwpToolShown(CWP.tool)) cwpSetTool(CWP.mode === 'order' ? 'plant' : 'walk', true);   // đang cầm công cụ vừa bị ẩn (Lấn biển xong đảo): về công cụ mặc định
+}
 function cwpToolAvail(id) {
     if (id === 'upgrade') return !!(window.cwUpAny && window.cwUpAny());   // xám khi chưa 4★ / không còn công trình cấp 1
     if (id === 'expand') return cwExpandLeft();   // lấn biển: xám khi đảo đã mở rộng hết
@@ -20435,6 +20587,7 @@ let cwpKeysKnown = (() => { try { return localStorage.getItem('cw_keys_known') =
 function cwpKeysLearned() { if (cwpKeysKnown) return; cwpKeysKnown = true; try { localStorage.setItem('cw_keys_known', '1'); } catch (e) { } }
 function cwpToolSync() {
     if (!cwpBarEl) return;
+    cwpToolVis();
     for (const b of cwpBarEl.querySelectorAll('.cwp-tb')) b.classList.toggle('off', !cwpToolAvail(b.dataset.t) || !cwpToolAfford(b.dataset.t));
     const okSeat = seatToolOK();   // Ghế biển nằm trong bảng Trang trí (phím 5), khoá cho tới khi đảo mở rộng hoàn toàn
     if (okSeat && !mileDone.has('seatUnlock')) { logMile('seatUnlock', '⛱️ Đảo mở rộng hoàn toàn: mở khoá Ghế biển'); cwpToast('⛱️ Đảo đã mở rộng hoàn toàn: mở khoá ⛱️ Ghế biển (trong 🏮 Trang trí, phím 5)', 3000); }
@@ -22456,7 +22609,7 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         cv.addEventListener('wheel', (e) => { if (e.shiftKey) mark('swheel'); else mark('zoom'); }, true);
     }
     window.addEventListener('keydown', (e) => { if (/^[1-4]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) mark('keys'); }, true);
-    const on = (id, ev, k) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => mark(k)); };
+    const on = (id, ev, k) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => { if (!window.__cwAutoClosing) mark(k); }); };   // r59: lần tự thu gọn menu không tính là người chơi dùng tính năng
     on('hud-toggle', 'click', 'menu'); on('hud-gear', 'click', 'gear'); on('hud-hist', 'click', 'hist'); on('hud-star', 'click', 'star');
     setTimeout(() => { const st = document.getElementById('cw-star'); if (st) { st.addEventListener('mouseenter', () => mark('star')); st.addEventListener('click', () => mark('star')); } }, 0);
     setTimeout(() => { const tb = document.getElementById('cwp-tbtn'); if (tb) tb.addEventListener('click', () => mark('tbtn')); }, 1500);
@@ -22483,7 +22636,9 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
     function show(ic, html, btn, fn, ms) {
         el.innerHTML = '<span class="ic">' + ic + '</span><div class="tx">' + html + (btn ? '<div class="ac"><button type="button" data-go="1">' + btn + '</button></div>' : '') + '</div><button type="button" class="x" title="Đóng">✕</button>';
         act = fn || null; el.classList.add('show'); lastAny = performance.now();
-        clearTimeout(hideT); hideT = setTimeout(hide, ms || 10000);
+        clearTimeout(hideT);
+        // r59: mọi bong bóng nhắc (kể cả mốc tạo đảo mới 15 s, gợi ý kẹt sao 20 s) tự đóng sau tối đa 10 s; đang rê chuột lên bong bóng thì chờ tới khi rời chuột
+        hideT = setTimeout(function wait() { if (el.matches(':hover')) hideT = setTimeout(wait, 1000); else hide(); }, Math.min(ms || 10000, 10000));
     }
     const TOOLS = { '🌳': ['plant', 'cây', 'Trồng', '1'], '🌊': ['pond', 'ao hồ', 'Đào ao', '3'], '🏠': ['build', 'nhà', 'Xây nhà', '2'], '🌱': ['farm', 'ruộng', 'Khai ruộng', '4'] };
     const icoOf = { plant: '🌳', pond: '💧', build: '🏠', farm: '🌾' };
@@ -22575,6 +22730,57 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         if (idle >= 8000) hotNudge();
     }, 5000);
     window.cwNudge = { show, used, idleNudge, tipNudge, isleNudge, starNudge, stuckReset: () => { stuckT = -1e9; } };   // thử từ console
+})();
+
+// ===== (4) TỰ ĐÓNG BẢNG (r59): bảng nào đang mở mà người chơi không rê chuột / chạm / cuộn / gõ phím lên nó suốt 10 giây thì tự đóng.
+//   Gồm: ⚙️ Cài đặt, 📜 Lịch sử, ⭐ Đánh giá đảo, 🏆 Thành tích / 📖 Sổ sưu tầm, quầy thuyền buôn, hộp thoại ước nguyện, bảng chọn mẫu cây / nhà. Menu 🌿: không còn bảng nào mở + không rê chuột lên menu 10 giây => tự thu gọn.
+//   Đóng bằng cách bấm đúng nút đóng của bảng (giữ nguyên logic cũ), nên không đổi cách bảng hoạt động. Bảng hướng dẫn (cwTutorial) không bị đụng tới.
+(function cwAutoClose() {
+    const IDLE = 10000;
+    const byId = (id) => document.getElementById(id);
+    const shown = (el) => !!el && el.classList.contains('show');
+    const PANELS = [
+        { id: 'timeline-panel', open: shown, close: () => { const b = byId('tl-close'); if (b) b.click(); } },
+        { id: 'hist-panel', open: shown, close: () => { const b = byId('hist-close'); if (b) b.click(); } },
+        { id: 'star-panel', open: shown, close: () => { const b = byId('star-close'); if (b) b.click(); } },
+        { id: 'cw-shop', open: shown, close: () => { const b = document.querySelector('#cw-shop .x'); if (b) b.click(); } },
+        { id: 'cw-wish', open: (el) => !!el && el.style.display === 'block', close: () => { const b = document.querySelector('#cw-wish button.x'); if (b) b.click(); } },
+        { id: 'cw-aw', box: '.box', open: shown, close: () => { const b = document.querySelector('#cw-aw .x'); if (b) b.click(); } },   // 🏆 Thành tích / 📖 Sổ sưu tầm (34_awards)
+        { id: 'cwp-kp', open: (el) => !!el && el.style.display !== 'none' && !!(typeof CWP !== 'undefined' && CWP.kp), close: () => { if (typeof cwpKpClose === 'function') cwpKpClose(); } }   // bảng chọn mẫu cây / nhà (30_rightclick_preview)
+    ];
+    // Bảng phủ kín màn hình (quầy thuyền buôn, thành tích): chỉ tính phần hộp nội dung (.box), không tính nền mờ phía sau
+    const area = (p, el) => (el && p.box && el.querySelector(p.box)) || (el && p.id === 'cw-shop' && el.querySelector('.box')) || el;
+    const act = {};   // thời điểm cuối cùng người chơi tương tác với từng bảng
+    const touchAct = (e) => {
+        const now = performance.now(), t = e.target;
+        for (const p of PANELS) { const el = area(p, byId(p.id)); if (el && t && el.contains && el.contains(t)) act[p.id] = now; }
+        const ui = byId('hud-main'), bt = byId('hud-btns');
+        if ((ui && ui.contains(t)) || (bt && bt.contains(t))) act.menu = now;
+    };
+    ['pointerdown', 'pointermove', 'wheel', 'keydown', 'scroll', 'touchstart'].forEach(n => document.addEventListener(n, touchAct, { capture: true, passive: true }));
+    const hov = (el) => { try { return !!el && el.matches(':hover'); } catch (e) { return false; } };
+    const quietSince = {};   // id -> mốc bắt đầu "mở mà không ai đụng tới"
+    function check(id, isOpen, isHover, doClose) {
+        const now = performance.now();
+        if (!isOpen || isHover || now - (act[id] || 0) < 400) { quietSince[id] = now; return; }   // đóng / đang rê chuột / vừa thao tác: tính lại từ đầu
+        if (quietSince[id] == null) quietSince[id] = now;
+        if (now - Math.max(quietSince[id], act[id] || 0) >= IDLE) {
+            quietSince[id] = now;
+            window.__cwAutoClosing = true; try { doClose(); } catch (e) { } window.__cwAutoClosing = false;
+        }
+    }
+    setInterval(() => {
+        const tut = window.cwTutorial && window.cwTutorial.isOn && window.cwTutorial.isOn();
+        let anyPanel = false;
+        for (const p of PANELS) {
+            const el = byId(p.id), op = !!el && p.open(el);
+            if (op) anyPanel = true;
+            check(p.id, op && !tut, hov(area(p, el)), p.close);
+        }
+        const ui = byId('ui-layer'), tg = byId('hud-toggle');
+        const menuOpen = !!ui && !ui.classList.contains('collapsed') && !anyPanel && !tut;
+        check('menu', menuOpen, hov(byId('hud-main')) || hov(byId('hud-btns')), () => { if (tg) tg.click(); });
+    }, 500);
 })();
 
 cwBoot();
@@ -22862,7 +23068,7 @@ cwBoot();
         document.head.appendChild(st);
         palEl = document.createElement('div'); palEl.id = 'cw-decor';
         palEl.innerHTML = '<div class="hd">🏮 Đồ trang trí đã có — bấm chọn rồi đặt lên ô cỏ trong làng</div>' + PAL_ORDER.map(k => { const K = DECOR_KINDS[k];
-            return '<button type="button" data-k="' + k + '" title="' + K.name + (K.beach ? ' · đặt trên bãi biển cho các cặp đôi · tối đa ' + K.max + ' trên cả đảo' : K.island ? ' ·' + lockWhy(K) + ' · tối đa ' + K.max + (K.group ? ' cái (cộng chung giàn lưới + giàn cá khô)' : ' cái') + ' trên cả đảo' + (K.free ? ' · đặt ở đâu cũng được' : '') : ' · tối đa ' + K.max + ' mỗi làng') + '"><span class="i">' + K.ico + '</span><span>' + K.name + '</span><small>' + (K.cost ? cwHeartFmt(K.cost) + '❤️' : 'miễn phí') + (K.island ? ' · ' + K.max + '/đảo' : ' · tối đa ' + K.max) + '</small></button>'; }).join('');
+            return '<button type="button" data-k="' + k + '" title="' + K.name + (K.beach ? ' · đặt trên bãi biển cho các cặp đôi · tối đa ' + K.max + ' trên cả đảo' : K.island ? ' ·' + lockWhy(K) + ' · tối đa ' + K.max + (K.group ? ' cái (cộng chung giàn lưới + giàn cá khô)' : ' cái') + ' trên cả đảo' + (K.free ? ' · đặt ở đâu cũng được' : '') : ' · tối đa ' + K.max + ' mỗi làng') + '"><span class="i">' + K.ico + '</span><span>' + K.name + '</span><small>' + (K.cost ? cwHeartFmt(K.cost) + '❤️' : 'miễn phí') + (K.island ? ' · ' + K.max + '/đảo' : ' · tối đa ' + K.max + '/làng') + '</small></button>'; }).join('');
         ['pointerdown', 'wheel'].forEach(n => palEl.addEventListener(n, (e) => e.stopPropagation()));
         palEl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (!isUnl(b.dataset.k)) { cwDeny('deny', '🔒 ' + DECOR_KINDS[b.dataset.k].name + (b.dataset.k === 'seat' ? ' mở khi đảo mở rộng hoàn toàn' : (DECOR_KINDS[b.dataset.k].star || DECOR_KINDS[b.dataset.k].fish) ? lockWhy(DECOR_KINDS[b.dataset.k]) : ' chưa mở khoá — sẽ mở ngẫu nhiên khi đảo lên sao, có lễ hội hoặc mở rộng hoàn toàn')); return; } setDecorKind(b.dataset.k); if (CWP.assist) CWP.assistT = performance.now(); });
         { const mo = document.createElement('div'); mo.className = 'more'; palEl.appendChild(mo); }
@@ -25129,8 +25335,8 @@ cwBoot();
         ctx.restore();
     }
     // hộp thoại
-    let dlgEl = null, dlgW = null, dlgRaf = 0;
-    function dlgHide() { dlgW = null; cancelAnimationFrame(dlgRaf); if (dlgEl) dlgEl.style.display = 'none'; }
+    let dlgEl = null, dlgW = null, dlgRaf = 0, dlgTimer = 0;
+    function dlgHide() { dlgW = null; cancelAnimationFrame(dlgRaf); clearTimeout(dlgTimer); if (dlgEl) dlgEl.style.display = 'none'; }
     function dlgShow(w) {
         if (!dlgEl) {
             const st = document.createElement('style');
@@ -25148,8 +25354,9 @@ cwBoot();
         }
         dlgW = w;
         const nm = window.cwBotName ? window.cwBotName(w.b) : 'Người dân', tl = w.W.tool, tico = { pond: '💧 Đào ao', plant: '🌳 Trồng cây', build: '🏠 Xây nhà', farm: '🌾 Khai ruộng', decor: '🏮 Trang trí' }[tl];
-        dlgEl.innerHTML = '<b>' + nm + '</b>: <span class="q">“' + w.W.txt + '”</span><div class="ac">' + (tl ? '<button type="button" data-t="' + tl + '">' + tico + '</button>' : '') + '<button type="button" class="x">Để sau</button></div>';
+        dlgEl.innerHTML = '<b>' + nm + '</b>: <span class="q">“' + w.W.txt + '”</span><div class="ac">' + (tl ? '<button type="button" data-t="' + tl + '">' + tico + '</button>' : '') + '<button type="button" class="x">' + (w === lostQ ? 'Đã hiểu' : 'Để sau') + '</button></div>';
         dlgEl.style.display = 'block';
+        clearTimeout(dlgTimer); if (w === lostQ) dlgTimer = setTimeout(() => { if (dlgW === w) dlgHide(); }, 5000);   // hộp thoại nhờ tìm người tự đóng sau 5 giây
         const follow = () => {
             if (!dlgW || dlgW.b.gone) { dlgHide(); return; }
             const z = camera.zoom, b = dlgW.b, bx = (b.x - camera.x) * z + viewW / 2, by = (b.y - camera.y) * z + viewH / 2;
@@ -25186,6 +25393,26 @@ cwBoot();
     const restingAdult = (b) => b.state === 'BREAK' || (b.state === 'IDLE' && !!b.rest) || (b.state === 'JOB' && b.jb && b.jb.phase === 'rest');
     // Tên người sinh từ hạt giống (12_social) nên CÓ THỂ TRÙNG; nhiệm vụ chỉ chọn người có tên duy nhất trên đảo (đang sống: người lớn + bé)
     const lostNames = () => { const m = new Map(); for (const o of bots.concat(kids)) { if (o.gone || o.dying) continue; let n = ''; try { n = window.cwBotName(o); } catch (e) { } m.set(n, (m.get(n) || 0) + 1); } return m; };
+    // Gợi ý VỊ TRÍ người cần tìm: chỉ khi bản đồ đã mở > 70% đất. Tính lúc hộp thoại hiện (qua getter W.txt) nên đúng chỗ người đó đang đứng.
+    // Thứ tự ưu tiên: gần hồ > bãi biển > vùng lạnh > gần giữa đảo / phía tây / phía đông.
+    const LOST_HINT_OPEN = 0.7;
+    function lostWhere(o) {
+        try {
+            if (!o || !(landTotal() >= MAX_LAND * LOST_HINT_OPEN)) return '';
+            const cx = Math.floor(o.x / T), cy = Math.floor(o.y / T); if (!inG(cx, cy)) return '';
+            let lake = false, sea = false;
+            for (let dx = -3; dx <= 3 && !(lake && sea); dx++) for (let dy = -3; dy <= 3; dy++) {
+                if (!inG(cx + dx, cy + dy)) continue; const ty = grid[cx + dx][cy + dy].type;
+                if (ty === TYPE_WATER) lake = true; else if (ty === TYPE_SEA) sea = true;
+            }
+            if (lake) return 'ở hồ cá';
+            if (sea) return 'ở bãi biển';
+            if (coldK(cy) >= 0.5) return 'ở vùng lạnh';
+            const mid = GRID_W / 2, dxm = cx - mid;
+            if (Math.abs(dxm) <= GRID_W * 0.12) return 'ở gần giữa đảo';
+            return dxm < 0 ? 'ở phía tây' : 'ở phía đông';
+        } catch (e) { return ''; }
+    }
     function lostTry() {
         const ok = (b) => !b.gone && !b.dying && !b.fading && b.pop >= 1 && b.state !== 'SLEEP';
         const el = bots.filter(b => b.elder && ok(b) && !b[WISH] && !b.fest);
@@ -25206,9 +25433,11 @@ cwBoot();
         const nm = window.cwBotName ? window.cwBotName(tgt) : 'bạn ấy';
         const jb = kind === 'adult' ? tgt.job : null, bk = kind === 'adult' && tgt.brk ? String(tgt.brk.kind) : '', hs = (t) => { try { return window.cwHas(tgt, t); } catch (e) { return false; } };
         const hint = kind !== 'adult' || jb ? '' : /fish/.test(bk) || hs('fish') ? '(Nghe nói người ấy thích đi câu cá.)' : /sea|gaze|shore/.test(bk) || hs('shore') || hs('coast') ? '(Nghe nói người ấy thích đi dạo bờ biển.)' : /lake/.test(bk) ? '(Nghe nói người ấy thích ngắm hồ nước.)' : /stroll/.test(bk) ? '(Nghe nói người ấy hay đi dạo quanh làng.)' : '';
-        const txt = kind === 'kid' ? 'Bé ' + nm + ' đi chơi từ nãy mà chưa thấy về… Ai tìm giúp tôi với! (Rê chuột vào từng người để xem tên; thấy đúng bé ' + nm + ' thì bấm vào bé.)'
-            : 'Tôi đang tìm ' + (jb === 'hunter' ? 'thợ săn ' : jb === 'fisher' ? 'thủy thủ ' : jb === 'postman' ? 'bác đưa thư ' : '') + nm + ', đi đâu mất rồi, có việc cần gặp…' + (hint ? ' ' + hint : '') + ' Ai tìm giúp tôi với! (Rê chuột vào từng người để xem tên; thấy đúng tên ' + nm + ' thì bấm vào người đó.)';
-        lostQ = { b: e, tgt, kind, name: nm, t: LOST_LIFE, found: false, W: { tool: null, txt } };
+        const first = !(ext().lostN > 0);   // lời chỉ cách chơi (ngoặc đơn) chỉ hiện ở nhiệm vụ đầu tiên của ván; đã tìm thấy 1 lần (ext().lostN) thì bỏ
+        const loc = () => { const w = lostWhere(tgt); return w ? ' (Hình như ' + (kind === 'kid' ? 'bé' : 'người ấy') + ' đang ' + w + '.)' : ''; };   // chỉ có khi đất mở > 70%
+        const mkTxt = () => kind === 'kid' ? 'Bé ' + nm + ' đi chơi từ nãy mà chưa thấy về…' + loc() + ' Ai tìm giúp tôi với!' + (first ? ' (Rê chuột vào từng người để xem tên; thấy đúng bé ' + nm + ' thì bấm vào bé.)' : '')
+            : 'Tôi đang tìm ' + (jb === 'hunter' ? 'thợ săn ' : jb === 'fisher' ? 'thủy thủ ' : jb === 'postman' ? 'bác đưa thư ' : '') + nm + ', đi đâu mất rồi, có việc cần gặp…' + (hint ? ' ' + hint : '') + loc() + ' Ai tìm giúp tôi với!' + (first ? ' (Rê chuột vào từng người để xem tên; thấy đúng tên ' + nm + ' thì bấm vào người đó.)' : '');
+        lostQ = { b: e, tgt, kind, name: nm, t: LOST_LIFE, found: false, W: { tool: null, get txt() { return mkTxt(); } } };
         try { cwpToast('👵 Có một cụ già đang nhờ tìm ' + (kind === 'kid' ? 'bé ' : '') + nm + ' — bấm vào cụ để nghe, rồi đi tìm', 3800); } catch (er) { }
         return true;
     }
@@ -25220,6 +25449,7 @@ cwBoot();
     }
     function lostFound() {
         const Q = lostQ; if (!Q || Q.found) return; Q.found = true;
+        try { const x = ext(); x.lostN = (x.lostN | 0) + 1; } catch (er) { }   // đã tìm thấy ít nhất 1 lần trong ván này: các lần sau không hiện lời chỉ cách chơi nữa
         const t = Q.tgt; t.hop = 0.7;
         if (Q.kind === 'kid' && kids.includes(t)) {
             const hm = (t.home && grid[Math.floor(t.home.x / T)][Math.floor(t.home.y / T)].type === TYPE_HOUSE) ? t.home : nearestHouse(t.x, t.y, 40);
@@ -25356,21 +25586,60 @@ cwBoot();
         if (f.croak > 0) { f.croak = Math.max(0, f.croak - 0.016); const q = Math.min(1, f.croak * 3); if (q > 0.02) { el(3.2, -1.9, 1.7 * q, 1.3 * q, 'rgba(240,246,205,.95)'); el(2.8, -2.3, 0.6 * q, 0.4 * q, 'rgba(255,255,255,.7)'); } }   // phồng túi kêu
         ctx.restore();
     }
-    function lakeGroups() {   // các hồ lớn (>= 24 ô nước): danh sách ô nước theo id hồ
+    // Hồ có đảo (r59): có ô đất (không phải nước / biển) nằm trọn bên trong hồ, không nối được ra ngoài khung hồ.
+    //   Dò bằng loang từ viền khung bao hồ qua mọi ô "không phải nước của hồ này"; ô nào còn lại trong khung mà không phải nước hồ => ô đảo.
+    const SWAN_ISLE_MIN = 2;   // cần ít nhất 2 ô đất trong hồ mới tính là "có đảo"
+    function lakeHasIsland(id, cells) {
+        let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+        for (const p of cells) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
+        x0--; y0--; x1++; y1++;
+        const W = x1 - x0 + 1, H = y1 - y0 + 1, seen = new Uint8Array(W * H), st = [];
+        const isLake = (x, y) => { const c = grid[x] && grid[x][y]; return !!c && c.type === TYPE_WATER && c.lake === id; };
+        for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+            if ((x === x0 || x === x1 || y === y0 || y === y1) && !isLake(x, y)) { seen[(x - x0) * H + (y - y0)] = 1; st.push([x, y]); }
+        }
+        while (st.length) {
+            const [x, y] = st.pop();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = x + dx, ny = y + dy;
+                if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+                const k = (nx - x0) * H + (ny - y0); if (seen[k] || isLake(nx, ny)) continue;
+                seen[k] = 1; st.push([nx, ny]);
+            }
+        }
+        let n = 0;
+        for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+            if (seen[(x - x0) * H + (y - y0)] || isLake(x, y)) continue;
+            const c = grid[x] && grid[x][y]; if (c && c.type !== TYPE_WATER && c.type !== TYPE_SEA && ++n >= SWAN_ISLE_MIN) return true;
+        }
+        return false;
+    }
+    let swanIsle = new Set(), swanIsleT = 0;   // id các hồ có đảo (kiểm lại mỗi 2 phút kể từ khi thiên nga xuất hiện)
+    function lakeGroups() {   // các hồ lớn (>= 24 ô nước): 3 hồ lớn nhất + mọi hồ có đảo (nếu đã kiểm); danh sách ô nước theo id hồ
         const g = {};
         for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) { const c = grid[x][y]; if (c.type === TYPE_WATER && c.lake) (g[c.lake] || (g[c.lake] = [])).push([x, y]); }
-        return Object.keys(g).map(id => ({ id: +id, cells: g[id] })).filter(L => L.cells.length >= 24).sort((a, b) => b.cells.length - a.cells.length).slice(0, 3);
+        return Object.keys(g).map(id => ({ id: +id, cells: g[id] })).filter(L => L.cells.length >= 24).sort((a, b) => b.cells.length - a.cells.length).filter((L, i) => i < 3 || swanIsle.has(L.id));
     }
     function swansUpdate(dt) {
         if ((swanT -= dt) <= 0) {
             swanT = 20;
             const want = (cwStar.peak || 0) >= 8;   // đảo từng đạt 4★
-            if (!want) { swans.length = 0; } else {
+            if (!want) { swans.length = 0; swanIsle = new Set(); swanIsleT = 0; } else {
+                // Từ khi thiên nga đã xuất hiện: mỗi 2 phút (thời gian game) dò hồ có đảo; hồ đó đã có thiên nga thì giữ nguyên, chưa có thì lát sau tự thêm
+                if (swans.length && (swanIsleT += 20) >= 120) {
+                    swanIsleT = 0; const ids = new Set();
+                    try {
+                        const g = {};
+                        for (let x = 0; x < GRID_W; x++) for (let y = 0; y < GRID_H; y++) { const c = grid[x][y]; if (c.type === TYPE_WATER && c.lake) (g[c.lake] || (g[c.lake] = [])).push([x, y]); }
+                        for (const id of Object.keys(g)) if (g[id].length >= 24 && lakeHasIsland(+id, g[id])) ids.add(+id);
+                    } catch (e) { }
+                    swanIsle = ids;
+                }
                 const L = lakeGroups();
                 for (let i = swans.length - 1; i >= 0; i--) { const s = swans[i], c = grid[Math.floor(s.x / T)] && grid[Math.floor(s.x / T)][Math.floor(s.y / T)]; if (!c || c.type !== TYPE_WATER) swans.splice(i, 1); }
                 for (let i = swans.length - 1; i >= 0; i--) if (!L.some(q => q.id === swans[i].lid)) swans.splice(i, 1);   // hồ nhỏ lại / bị lấp: thiên nga bay đi
                 for (const { id, cells } of L) {
-                    const have = swans.filter(s => s.lid === id).length;   // mỗi hồ lớn đúng 2 con (theo id hồ)
+                    const have = swans.filter(s => s.lid === id).length;   // mỗi hồ trong danh sách (3 hồ lớn nhất + hồ có đảo) đúng 2 con (theo id hồ)
                     for (let k = have; k < 2; k++) { const p = cells[(Math.random() * cells.length) | 0]; swans.push({ lid: id, x: (p[0] + 0.5) * T, y: (p[1] + 0.5) * T, tx: 0, ty: 0, wait: 0, dir: 1, ph: Math.random() * 6, pop: 0 }); }
                 }
                 if (swans.length && !mileDone.has('swan1')) { try { logMile('swan1', '🦢 Thiên nga bay về hồ (đảo đạt 4★)'); cwpToast('🦢 Thiên nga đã bay về các hồ lớn trên đảo!', 3000); } catch (e) { } }
@@ -26039,7 +26308,7 @@ cwBoot();
         ctx.strokeStyle = '#c0504a'; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(-1.2, -2.7); ctx.lineTo(-1.2, -0.5); ctx.stroke();
         ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(-2, -2.9, 2.6, 0.5, 0, 0, TAU); ctx.fill();         // bóng sáng
         ctx.restore();
-        const cyc = (time + b.seed * 60) % 60, tk = cyc < 6 ? Math.sin(cyc / 6 * Math.PI) : 0;   // thường sáng bình thường; mỗi phút lấp lánh mạnh ~6 giây (mờ vào / ra)
+        const cyc = time % 10, tk = cyc < 3 ? Math.min(1, Math.sin(cyc / 3 * Math.PI) * 1.6) : 0;   // chu kỳ 10 giây: 3 giây lấp lánh (mờ vào / ra) rồi 7 giây không sáng
         if (tk <= 0.01) return;
         // lấp lánh to, dễ thấy: quầng sáng nhịp thở + 2 ngôi sao 4 cánh nháy lệch nhau (luôn đủ to kể cả khi thu nhỏ bản đồ)
         const zk = Math.max(1, 0.8 / camera.zoom), pulse = 0.5 + 0.5 * Math.sin(time * 2.2 + b.seed * 7);
@@ -27311,7 +27580,8 @@ var UPA = (function () {
         if (prevTap) prevTap(sx, sy);
     };
 
-    // ===== công cụ thứ 7 ⬆ NÂNG CẤP (thanh công cụ, phím 7): bấm vào công trình để nâng cấp ngay; ô xanh / đỏ xem trước như các công cụ khác =====
+    // ===== công cụ ⬆ NÂNG CẤP (thanh công cụ, chỉ hiện từ 4★; phím 6 khi Lấn biển đã ẩn, ngược lại 7): bấm vào công trình để nâng cấp ngay; ô xanh / đỏ xem trước như các công cụ khác =====
+    window.cwUpUnlocked = function () { return (cwStar.peak || 0) >= UP_STAR; };   // đảo từng đạt 4★ (peak dính, không tụt lại) => hiện nút Nâng cấp trên thanh công cụ (29_orders: cwpToolShown)
     var anyT = 0, anyV = false;
     window.cwUpAny = function () {   // có công trình cấp 1 nâng cấp được không (đảo >= 4★)? cache 1 giây
         var now = performance.now(); if (now - anyT < 1000) return anyV; anyT = now; anyV = false;
@@ -27337,7 +27607,7 @@ var UPA = (function () {
         if (CWP.tool !== 'upgrade') return prevToolClick.apply(this, arguments);
         var c = null; try { c = hit(sx, sy); } catch (e) { }
         CWP.prev = null; hide();
-        if (!c) { toast('Bấm vào nhà thờ, tháp đồng hồ, cối xay, hải đăng hoặc bến thuyền'); return; }
+        if (!c) return;   // bấm vào người / cỏ: im lặng (gợi ý nằm ở ô xem trước khi rê chuột)
         if (window.cwUpLv(c) === 2) { toast(UP_NAME[HOUSE_VARIANTS[c.houseVar].special] + ' đã ở cấp 2'); return; }
         doUpgrade(c);
     };
