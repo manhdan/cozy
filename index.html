@@ -155,6 +155,15 @@
             #ui-layer:not(.collapsed) #hud-body { max-height: calc(100vh - 150px); }
             #set-grid { grid-template-columns: 1fr; }
         }
+        /* [r59] điện thoại: 3 nút cuối bảng 🌿 (📖 Hướng dẫn · 🏆 Thành tích · 🏝️ Tạo đảo mới) gọn lại thành 1 hàng nút tròn nhỏ chỉ còn biểu tượng (chấm đỏ của 🏆 vẫn hiện); nhãn đầy đủ vẫn xem được ở máy tính */
+        @media (max-width: 700px) {
+            #ui-layer #new-row { flex-wrap: nowrap; gap: 8px; margin-top: 4px; }
+            #ui-layer #new-row > button { flex: none; width: 36px; height: 36px; padding: 0; border-radius: 50%; font-size: 0; line-height: 36px; }
+            #ui-layer #new-row > button::before { font-size: 18px; line-height: 36px; }
+            #cw-tutorial::before { content: '📖'; }
+            #cw-aw-btn::before { content: '🏆'; }
+            #cw-newgame::before { content: '🏝️'; }
+        }
         #tl-list .tl-row { -webkit-user-select: text; user-select: text; }
         #tl-guide .tl-key { -webkit-user-select: text; user-select: text; }
         #tl-guide .tl-key kbd { -webkit-user-select: text; user-select: text; }
@@ -20536,6 +20545,11 @@ function cwHeartsSync() {
     if (!cwHeartsEl) return;
     const on = !!(CWP.active && CWP.mode === 'order'); if ((cwHeartsEl.style.display === 'none') === on) cwHeartsEl.style.display = on ? '' : 'none';
     if (!on) { if (cwHeartsTipOn) cwHeartsTip(false); return; }
+    {   // r59: điện thoại: hàng tim bám sát ngay dưới ngôi sao (CSS cố định top 64px làm 2 hàng cách xa; PC giữ 46px như cũ)
+        let tp = '';
+        if (window.innerWidth <= 700) { const st = document.getElementById('cw-star'); if (st && st.style.display !== 'none' && st.getClientRects().length) { const r = st.getBoundingClientRect(); if (r.bottom > 0 && r.bottom < 120) tp = Math.round(r.bottom + 4) + 'px'; } }
+        if (cwHeartsEl.style.top !== tp) cwHeartsEl.style.top = tp;
+    }
     const H = cwHeartsGet(), hs = cwHeartsEl.children, clamp = (v) => Math.max(0, Math.min(1, v)), row2On = H > 5 + 1e-9;
     for (let i = 0; i < HEART_MAX; i++) {   // 10 tim đầu là con của #cw-hearts (số bay .fl được thêm phía sau); trần luôn là HEART_MAX nên không có tim nào bị "khoá"
         const el = hs[i];
@@ -20563,13 +20577,15 @@ function cwpToolShown(id) {
 function cwpToolVis() {
     if (!cwpBarEl) return;
     const up = CWP_TOOLS.find(t => t.id === 'upgrade'); if (up) up.key = cwpToolShown('expand') ? '7' : '6';
-    let last = 0;
+    let last = 0, nShown = 0;
     for (const t of CWP_TOOLS) {
         const b = cwpBarEl.querySelector('.cwp-tb[data-t="' + t.id + '"]'); if (!b) continue;
         const sh = cwpToolShown(t.id); if (b.style.display !== (sh ? '' : 'none')) b.style.display = sh ? '' : 'none';
         if (!sh) continue;
+        if (!(CWP.mode === 'order' && t.id === 'walk')) nShown++;   // r59: số nút công cụ đang hiện (chế độ giao việc không có 'Đi')
         if (t.key) { b.title = t.name + ' (phím ' + t.key + ')'; const k = b.querySelector('.k'); if (k && k.textContent !== t.key) k.textContent = t.key; last = Math.max(last, +t.key || 0); }
     }
+    if (cwpToolVis.n !== nShown) { cwpToolVis.n = nShown; document.body.style.setProperty('--cwp-n', String(nShown + 1)); }   // r59: công cụ + nút tròn = nShown + 1 ô chia đều bề ngang (cảm ứng, chế độ giao việc)
     const km = cwpBarEl.querySelector('.cwp-cap .kmax'); if (km && last && km.textContent !== String(last)) km.textContent = last;
     if (CWP.tool && !cwpToolShown(CWP.tool)) cwpSetTool(CWP.mode === 'order' ? 'plant' : 'walk', true);   // đang cầm công cụ vừa bị ẩn (Lấn biển xong đảo): về công cụ mặc định
 }
@@ -20626,10 +20642,14 @@ function cwpBadgeSync(L) {
 }
 // Bảng đổi tên công cụ -> loại việc của Bot
 const CWP_TASK = { dig: 'DIG', plant: 'PLANT', chop: 'CHOP', build: 'BUILD', pond: 'POND', farm: 'FARM', tend: 'TEND', fix: 'FIX', demo: 'DEMOLISH', fill: 'DEMOLISH', upgrade: 'FIX' };   // + sửa, phá + đào ao + khai ruộng, tưới
-const CWP_TOUCH_AIM_UP = 28;   // chạm tay: điểm chạm thật luôn thấp hơn ô người chơi NHÌN thấy (ngón che mất) => bù lên 28px trước khi tính ô, áp cho cả lần xem trước và lần xác nhận nên 2 lần luôn khớp
+const CWP_TOUCH_AIM_UP = 0;   // r59: chạm tay => ô giao việc nằm đúng chỗ ngón tay chạm (trước đây bù lên 28px nên ô xem trước nhảy lên 1–2 ô phía trên ngón, bấm lại đúng vào ô đang thấy thì lại nhảy tiếp). Cần bù nhẹ vì ngón che ô thì đặt 8–10 ở đây
 function cwpToolClick(sx, sy, touch, shift) {   // bấm ô ở chế độ Giao việc: chuột = đặt lệnh ngay; cảm ứng = lần 1 xem trước, lần 2 (cùng ô) đặt lệnh
     if (touch) sy -= CWP_TOUCH_AIM_UP;
-    const a = cwpAnchor(sx, sy), pv = CWP.prev;
+    let a = cwpAnchor(sx, sy); const pv = CWP.prev;
+    if (touch && pv && (pv.ax !== a.ax || pv.ay !== a.ay)) {   // r59: ô trên màn hình nhỏ (< 24px) thì chạm sát ô xem trước (lệch 1 ô) vẫn tính là xác nhận đúng ô đó, đỡ phải bấm lại nhiều lần
+        const tol = TILE_SIZE * camera.zoom < 24 ? 1 : 0;
+        if (tol && Math.abs(pv.ax - a.ax) <= tol && Math.abs(pv.ay - a.ay) <= tol) a = { ax: pv.ax, ay: pv.ay, act: pv.act, single: pv.single, fx: pv.fx, fy: pv.fy };
+    }
     if (touch && !(pv && pv.ax === a.ax && pv.ay === a.ay && pv.act === a.act && !!pv.single === !!a.single && pv.fx === a.fx && pv.fy === a.fy)) { CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy }; return; }
     CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy };
     if (CWP.tool === 'seat') { seatPlace(a.ax, a.ay); if (touch) CWP.prev = null; return; }
@@ -21088,9 +21108,12 @@ function orderUiInit() {
         'body.cwp-order:not(.cwp-touch):not(.cwp-assist) #cwp-bar{opacity:0;visibility:hidden;pointer-events:none;translate:0 var(--cwp-off);transition:opacity .4s ease-in,translate .4s cubic-bezier(.45,0,.8,.5),visibility 0s linear .4s}' +   // ẩn: trượt xuống ra khỏi màn hình + mờ dần (chuột: sau khi hết hoạt động)
         'html body.cwp-touch #cwp-bar{display:grid;--cwp-off:calc(100% + 280px)}html body.cwp-touch #cwp-bar:not(.open){opacity:0;visibility:hidden;pointer-events:none;translate:0 var(--cwp-off);transition:opacity .4s ease-in,translate .4s cubic-bezier(.45,0,.8,.5),visibility 0s linear .4s}' +   // cảm ứng: bảng đóng/mở cũng trượt + mờ (thay display:none)
         'body.cwp-order #cwp-joy{display:none!important}' +   // không có nhân vật => không có nút đi ảo
-        'body.cwp-touch.cwp-order #cwp-tbtn{bottom:calc(16px + env(safe-area-inset-bottom,0px))}' +
-        'body.cwp-touch.cwp-order #cwp-bar{bottom:calc(108px + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(4,62px)}' +   // 8 công cụ = bảng 4×2
-        'body.cwp-touch.cwp-order .cwp-tb{width:62px;min-height:62px;font-size:10.5px}' +
+        'body.cwp-touch.cwp-order{--cwp-w:max(40px,calc((100vw - 16px - (var(--cwp-n,7) - 1) * 4px) / var(--cwp-n,7)))}' +   // r59: cảm ứng + giao việc: công cụ và nút tròn chia đều bề ngang màn hình (6 công cụ + nút tròn = 7 ô)
+        'body.cwp-touch.cwp-order #cwp-tbtn{right:calc(8px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:var(--cwp-w);height:var(--cwp-w);font-size:clamp(8px,calc(var(--cwp-w) * .17),10px)}' +
+        'body.cwp-touch.cwp-order #cwp-tbtn .i{font-size:clamp(17px,calc(var(--cwp-w) * .42),23px)}' +
+        'html body.cwp-touch.cwp-order #cwp-bar{display:flex;flex-direction:row;gap:4px;padding:0;border-radius:0;background:none;box-shadow:none;left:auto;right:calc(12px + var(--cwp-w) + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));--cwp-off:calc(100% + 60px)}' +   // thanh công cụ = 1 hàng ngang, cùng hàng và ngay bên trái nút tròn
+        'body.cwp-touch.cwp-order .cwp-tb{width:var(--cwp-w);height:var(--cwp-w);min-height:0;box-sizing:border-box;padding:3px 0 2px;justify-content:center;font-size:clamp(8px,calc(var(--cwp-w) * .17),10px);box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
+        'body.cwp-touch.cwp-order .cwp-tb .i{font-size:clamp(17px,calc(var(--cwp-w) * .42),23px)}' +
         'body.cwp-touch.cwp-order #cwp-bud{bottom:calc(14px + env(safe-area-inset-bottom,0px))}' +
         'body.cwp-touch.cwp-order #cwp-toast{top:auto!important;bottom:calc(98px + env(safe-area-inset-bottom,0px))!important;max-width:70vw}' +   // thông báo nằm giữa, không đè nút tròn / đồng hồ
         'body.cwp-touch #ord-p{top:calc(64px + env(safe-area-inset-top,0px))}' +
@@ -22781,6 +22804,40 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         const menuOpen = !!ui && !ui.classList.contains('collapsed') && !anyPanel && !tut;
         check('menu', menuOpen, hov(byId('hud-main')) || hov(byId('hud-btns')), () => { if (tg) tg.click(); });
     }, 500);
+})();
+
+// ===== (5) MENU 🌿 (r59): luôn khởi động ở trạng thái thu gọn + vòng sáng gợi ý nút bấm được =====
+//   - index.html đã để #ui-layer.collapsed; ở đây thêm chốt an toàn: trong 10 giây đầu, nếu người chơi chưa tự bấm 🌿 mà menu lại bung ra (do code khởi tạo ở file khác) thì thu gọn lại.
+//   - Vòng sáng toả ra quanh 🌿 (khi menu thu gọn) cho tới khi người chơi bấm 🌿 một lần; quanh ⭐ 📜 ⚙️ (khi menu bung) cho tới khi người chơi bấm một trong ba nút này.
+//   - "Đã bấm" lấy từ localStorage 'cw_used' (cùng bộ đếm tính năng ở trên, mỗi máy) + cờ trong bộ nhớ phòng khi không ghi được localStorage.
+(function cwHudHints() {
+    const byId = (id) => document.getElementById(id);
+    const st = document.createElement('style');
+    st.textContent = '.cw-pulse{position:relative}'
+        + '.cw-pulse::before,.cw-pulse::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;border:2px solid rgba(255,206,84,.95);box-shadow:0 0 8px 1px rgba(255,214,102,.75);opacity:0;animation:cwRing 2s ease-out infinite}'
+        + '.cw-pulse::after{animation-delay:1s}'
+        + '@keyframes cwRing{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.9);opacity:0}}'
+        + '@media (prefers-reduced-motion:reduce){.cw-pulse::before,.cw-pulse::after{animation:none;opacity:.55;transform:scale(1.25)}.cw-pulse::after{display:none}}';
+    document.head.appendChild(st);
+
+    const IDS = { menu: 'hud-toggle', star: 'hud-star', hist: 'hud-hist', gear: 'hud-gear' };
+    const seen = {};
+    for (const k in IDS) { const b = byId(IDS[k]); if (b) b.addEventListener('click', () => { if (!window.__cwAutoClosing) seen[k] = 1; }, true); }
+    const usedLS = () => { try { const v = JSON.parse(localStorage.getItem('cw_used')); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+    const collapse = () => { const t = byId('hud-toggle'); window.__cwAutoClosing = true; try { if (t) t.click(); } catch (e) { } window.__cwAutoClosing = false; };
+
+    const t0 = performance.now();
+    setInterval(() => {
+        const ui = byId('ui-layer'); if (!ui) return;
+        const collapsed = ui.classList.contains('collapsed');
+        // chốt thu gọn lúc mở game
+        if (!seen.menu && performance.now() - t0 < 10000 && !collapsed) { collapse(); return; }
+        const u = usedLS();
+        const leaf = !(u.menu || seen.menu) && collapsed;
+        const trio = !(u.star || u.hist || u.gear || seen.star || seen.hist || seen.gear) && !collapsed;
+        const set = (id, on) => { const b = byId(id); if (b && b.classList.contains('cw-pulse') !== on) b.classList.toggle('cw-pulse', on); };
+        set('hud-toggle', leaf); set('hud-star', trio); set('hud-hist', trio); set('hud-gear', trio);
+    }, 400);
 })();
 
 cwBoot();
