@@ -151,18 +151,27 @@
         @media (max-width: 700px) {
             #ui-layer:not(.collapsed) { max-width: calc(100vw - 142px); box-sizing: border-box; }
             #ui-layer:not(.collapsed) #hud-mini { font-size: 12px; }
-            #ui-layer:not(.collapsed) .stats { font-size: 12px; line-height: 1.45; }
+            #ui-layer:not(.collapsed) .stats { font-size: 11px; line-height: 1.45; }
             #ui-layer:not(.collapsed) #hud-body { max-height: calc(100vh - 150px); }
             #set-grid { grid-template-columns: 1fr; }
         }
-        /* [r59] điện thoại: 3 nút cuối bảng 🌿 (📖 Hướng dẫn · 🏆 Thành tích · 🏝️ Tạo đảo mới) gọn lại thành 1 hàng nút tròn nhỏ chỉ còn biểu tượng (chấm đỏ của 🏆 vẫn hiện); nhãn đầy đủ vẫn xem được ở máy tính */
+        /* [r59] điện thoại: bố cục menu 🌿 gọn lại
+           - nền trắng trong suốt 75%
+           - thu gọn: chỉ 🌿 + dòng tóm tắt; giờ chơi đã chuyển vào đầu dòng thống kê thứ nhất (32_boot_extras: data-time)
+           - bung ra: hàng ngang 🌿 ⭐ 📜 ⚙️ 🏆 nằm trên cùng (bỏ dòng tóm tắt cạnh 🌿), các mục bên dưới rộng hết bề ngang
+           - 2 nút 📖 Hướng dẫn / 🏝️ Tạo đảo mới chia đều một dòng cuối, có chữ */
         @media (max-width: 700px) {
-            #ui-layer #new-row { flex-wrap: nowrap; gap: 8px; margin-top: 4px; }
-            #ui-layer #new-row > button { flex: none; width: 36px; height: 36px; padding: 0; border-radius: 50%; font-size: 0; line-height: 36px; }
-            #ui-layer #new-row > button::before { font-size: 18px; line-height: 36px; }
-            #cw-tutorial::before { content: '📖'; }
-            #cw-aw-btn::before { content: '🏆'; }
-            #cw-newgame::before { content: '🏝️'; }
+            #ui-layer { background: rgba(255, 255, 255, 0.75); }
+            #ui-layer:not(.collapsed) { flex-direction: column; align-items: stretch; gap: 6px; }
+            #ui-layer:not(.collapsed) #hud-btns { flex-direction: row; justify-content: flex-start; gap: 8px; }
+            #ui-layer:not(.collapsed) #hud-mini, #ui-layer:not(.collapsed) .hud-sep { display: none; }
+            #ui-layer.collapsed #hud-btns > #cw-aw-btn { display: none; }
+            #hud-btns > #cw-aw-btn { position: relative; pointer-events: auto; flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.18); font-size: 0; line-height: 34px; cursor: pointer; }
+            #hud-btns > #cw-aw-btn::before { content: '🏆'; font-size: 18px; line-height: 34px; }
+            #hud-btns > #cw-aw-btn:hover { background: #fff; }
+            #stats-line1[data-time]::before { content: attr(data-time) " · "; font-weight: 700; }
+            #ui-layer #new-row { flex-wrap: nowrap; gap: 8px; margin-top: 6px; }
+            #ui-layer #new-row > button { flex: 1 1 0; min-width: 0; width: auto; height: 34px; padding: 0 8px; border-radius: 17px; font-size: 12px; line-height: 1; white-space: nowrap; }
         }
         #tl-list .tl-row { -webkit-user-select: text; user-select: text; }
         #tl-guide .tl-key { -webkit-user-select: text; user-select: text; }
@@ -20642,13 +20651,16 @@ function cwpBadgeSync(L) {
 }
 // Bảng đổi tên công cụ -> loại việc của Bot
 const CWP_TASK = { dig: 'DIG', plant: 'PLANT', chop: 'CHOP', build: 'BUILD', pond: 'POND', farm: 'FARM', tend: 'TEND', fix: 'FIX', demo: 'DEMOLISH', fill: 'DEMOLISH', upgrade: 'FIX' };   // + sửa, phá + đào ao + khai ruộng, tưới
+var CWP_TOUCH_MIN_PX = 40;   // r59: cảm ứng: ô giao việc (xem trước) luôn to ít nhất 40px trên màn hình (zoom xa ô thật chỉ vài px). Chạm trong khung này = xác nhận ô đang xem trước. Muốn to / nhỏ hơn: sửa số này
 const CWP_TOUCH_AIM_UP = 0;   // r59: chạm tay => ô giao việc nằm đúng chỗ ngón tay chạm (trước đây bù lên 28px nên ô xem trước nhảy lên 1–2 ô phía trên ngón, bấm lại đúng vào ô đang thấy thì lại nhảy tiếp). Cần bù nhẹ vì ngón che ô thì đặt 8–10 ở đây
 function cwpToolClick(sx, sy, touch, shift) {   // bấm ô ở chế độ Giao việc: chuột = đặt lệnh ngay; cảm ứng = lần 1 xem trước, lần 2 (cùng ô) đặt lệnh
     if (touch) sy -= CWP_TOUCH_AIM_UP;
     let a = cwpAnchor(sx, sy); const pv = CWP.prev;
-    if (touch && pv && (pv.ax !== a.ax || pv.ay !== a.ay)) {   // r59: ô trên màn hình nhỏ (< 24px) thì chạm sát ô xem trước (lệch 1 ô) vẫn tính là xác nhận đúng ô đó, đỡ phải bấm lại nhiều lần
-        const tol = TILE_SIZE * camera.zoom < 24 ? 1 : 0;
-        if (tol && Math.abs(pv.ax - a.ax) <= tol && Math.abs(pv.ay - a.ay) <= tol) a = { ax: pv.ax, ay: pv.ay, act: pv.act, single: pv.single, fx: pv.fx, fy: pv.fy };
+    if (touch && pv && cwpPvC && (pv.ax !== a.ax || pv.ay !== a.ay)) {   // r59: chạm TRONG khung ô xem trước (tối thiểu CWP_TOUCH_MIN_PX trên màn hình) = xác nhận đúng ô đó, không nhảy sang ô khác
+        const z = camera.zoom, T = TILE_SIZE, c = cwpPvC;
+        const px = viewW / 2 + ((c.cx0 + c.cx1) / 2 * T - camera.x) * z, py = viewH / 2 + ((c.cy0 + c.cy1) / 2 * T - camera.y) * z;
+        const hw = Math.max(CWP_TOUCH_MIN_PX, (c.cx1 - c.cx0) * T * z) / 2, hh = Math.max(CWP_TOUCH_MIN_PX, (c.cy1 - c.cy0) * T * z) / 2;
+        if (Math.abs(sx - px) <= hw && Math.abs(sy - py) <= hh) a = { ax: pv.ax, ay: pv.ay, act: pv.act, single: pv.single, fx: pv.fx, fy: pv.fy };
     }
     if (touch && !(pv && pv.ax === a.ax && pv.ay === a.ay && pv.act === a.act && !!pv.single === !!a.single && pv.fx === a.fx && pv.fy === a.fy)) { CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy }; return; }
     CWP.prev = { ax: a.ax, ay: a.ay, act: a.act, single: a.single, fx: a.fx, fy: a.fy };
@@ -21319,6 +21331,13 @@ function orderDrawGround() {   // ô của các lệnh đã giao (chờ bot = v�
         cwpGroundDraw(x0 * T, y0 * T, x1 * T, y1 * T, taken ? '90,200,120' : '255,196,60', 0.24, taken ? 'rgba(110,225,150,.95)' : 'rgba(255,196,60,.95)', [4 * k, 3 * k], k);
     }
 }
+function cwpTouchBox(x0, y0, x1, y1) {   // r59: cảm ứng: ô xem trước to ít nhất CWP_TOUCH_MIN_PX trên màn hình (đơn vị ô), giữ nguyên tâm
+    if (!CWP.touchUI) return [x0, y0, x1, y1];
+    const m = CWP_TOUCH_MIN_PX / camera.zoom / TILE_SIZE;
+    if (x1 - x0 < m) { const c = (x0 + x1) / 2; x0 = c - m / 2; x1 = c + m / 2; }
+    if (y1 - y0 < m) { const c = (y0 + y1) / 2; y0 = c - m / 2; y1 = c + m / 2; }
+    return [x0, y0, x1, y1];
+}
 function cwpDrawPreviewGround() {   // ô xem trước xanh / đỏ / cam (đã đặt) của công cụ đang chọn
     cwpPvC = null;
     if (!cwpTipEl) return;
@@ -21328,7 +21347,8 @@ function cwpDrawPreviewGround() {   // ô xem trước xanh / đỏ / cam (đã 
     const offId = act === 'dig' ? 'pond' : act, off = !rm && !ORDERS.some(o => o.cells.some(p => p[0] === pv.ax && p[1] === pv.ay)) && CWP_TOOLS.some(t => t.id === offId && t.id !== 'walk') && (!cwpToolAvail(offId) || !cwpToolAfford(offId));
     if (off) {   // nút công cụ đang xám (hết tim / hết hạn mức): ô dưới con trỏ chuyển xám, không icon (không biến mất)
         const T0 = TILE_SIZE, k0 = 1 / camera.zoom, ax = pv.ax, ay = pv.ay;
-        cwpGroundDraw(ax * T0, ay * T0, (ax + 1) * T0, (ay + 1) * T0, '150,150,150', 0.45, 'rgba(235,235,235,0.9)', null, k0);
+        const gb = cwpTouchBox(ax, ay, ax + 1, ay + 1);
+        cwpGroundDraw(gb[0] * T0, gb[1] * T0, gb[2] * T0, gb[3] * T0, '150,150,150', 0.45, 'rgba(235,235,235,0.9)', null, k0);
         cwpPvC = { r: { ok: false, reason: '', cells: [[ax, ay]] }, inQ: false, cx0: ax, cy0: ay, cx1: ax + 1, cy1: ay + 1, act: '', cost: 0, grey: true };
         return;
     }
@@ -21340,7 +21360,8 @@ function cwpDrawPreviewGround() {   // ô xem trước xanh / đỏ / cam (đã 
     if (r.ok && !inQ && !cwHeartsCan(cost)) r = Object.assign({}, r, { ok: false, reason: 'Hết tim ❤️ (cần ' + cwHeartFmt(cost) + ')' });
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const p of r.cells) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0] + 1); y1 = Math.max(y1, p[1] + 1); }
-    cwpGroundDraw(x0 * T, y0 * T, x1 * T, y1 * T, inQ ? '255,160,50' : r.ok ? '70,200,100' : '230,70,60', inQ ? 0.46 : r.ok ? 0.42 : 0.44, r.ok ? 'rgba(235,255,240,0.95)' : 'rgba(255,235,230,0.95)', null, k);
+    const bx = cwpTouchBox(x0, y0, x1, y1);   // vùng cố định tối thiểu khi chạm; cwpPvC bên dưới giữ cỡ ô thật
+    cwpGroundDraw(bx[0] * T, bx[1] * T, bx[2] * T, bx[3] * T, inQ ? '255,160,50' : r.ok ? '70,200,100' : '230,70,60', inQ ? 0.46 : r.ok ? 0.42 : 0.44, r.ok ? 'rgba(235,255,240,0.95)' : 'rgba(255,235,230,0.95)', null, k);
     cwpPvC = { r, inQ, cx0: x0, cy0: y0, cx1: x1, cy1: y1, act, cost };   // thêm cy1: thiếu nó thì toạ độ icon giữa ô bị NaN nên icon không vẽ
 }
 function cwpDrawPreview(time) {   // chỉ còn nhãn lý do (DOM); ô vẽ ở cwpDrawPreviewGround
@@ -21350,7 +21371,7 @@ function cwpDrawPreview(time) {   // chỉ còn nhãn lý do (DOM); ô vẽ ở 
     if (s.grey) { cwpTipEl.style.display = 'none'; return; }
     const r = s.r, inQ = s.inQ, T = TILE_SIZE, z = camera.zoom;
     if (!inQ) {   // biểu tượng loại hành động ở GIỮA ô (vẽ sau cây / nhà / người nên không bị che); ô đã có lệnh thì thôi (đã có icon giữa ô + số thứ tự)
-        const k = 1 / z, fs = Math.max(T * CWP_ICON_K, 8 * k);
+        const k = 1 / z, fs = Math.max(T * CWP_ICON_K, 8 * k, CWP.touchUI ? CWP_TOUCH_MIN_PX * 0.45 * k : 0);
         ctx.save(); ctx.font = fs + 'px "Segoe UI Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000'; ctx.globalAlpha = 0.95;
         ctx.fillText(ORDER_ICO[s.act] || '', (s.cx0 + s.cx1) / 2 * T, (s.cy0 + s.cy1) / 2 * T);
         ctx.restore();
@@ -22838,6 +22859,32 @@ document.getElementById('cw-newgame').addEventListener('click', () => {
         const set = (id, on) => { const b = byId(id); if (b && b.classList.contains('cw-pulse') !== on) b.classList.toggle('cw-pulse', on); };
         set('hud-toggle', leaf); set('hud-star', trio); set('hud-hist', trio); set('hud-gear', trio);
     }, 400);
+})();
+
+// ===== (6) MENU 🌿 TRÊN ĐIỆN THOẠI (r59): giờ chơi chuyển vào đầu dòng thống kê thứ nhất + nút 🏆 lên hàng nút trên cùng =====
+//   CSS nằm ở index.html (@media max-width 700px). Ở đây chỉ làm 2 việc DOM mà CSS không làm được:
+//   (a) dòng tóm tắt cạnh 🌿 (#hud-mini) bỏ phần giờ; giờ đưa vào thuộc tính data-time của #stats-line1 (CSS vẽ ra đầu dòng, không bị code game ghi đè).
+//   (b) nút 🏆 Thành tích (34_awards tạo trong #new-row) được chuyển lên #hud-btns, sau ⚙️; màn rộng thì trả về chỗ cũ.
+(function cwPhoneHud() {
+    const mq = window.matchMedia('(max-width:700px)'), byId = (id) => document.getElementById(id);
+    const RE = /^[^\d]{0,4}?(\d{1,2}:\d{2}(?::\d{2})?)\s*(?:·|\|)?\s*/;   // "⏱ 06:08 · ..." => giờ + phần còn lại
+    function fixMini() {
+        if (!mq.matches) return;
+        const m = byId('hud-mini'); if (!m) return;
+        const r = RE.exec(m.textContent); if (!r) return;   // chưa có giờ hoặc đã tách rồi
+        const l1 = byId('stats-line1'); if (l1 && l1.dataset.time !== r[1]) l1.dataset.time = r[1];
+        m.textContent = m.textContent.slice(r[0].length);
+    }
+    function placeAw() {
+        const btns = byId('hud-btns'), row = byId('new-row'), aw = byId('cw-aw-btn'); if (!btns || !row || !aw) return;
+        if (mq.matches) { if (aw.parentNode !== btns) btns.appendChild(aw); }
+        else if (aw.parentNode !== row) row.insertBefore(aw, byId('cw-newgame'));
+    }
+    const m0 = byId('hud-mini');
+    if (m0) new MutationObserver(fixMini).observe(m0, { childList: true, characterData: true, subtree: true });
+    if (mq.addEventListener) mq.addEventListener('change', () => { placeAw(); fixMini(); }); else if (mq.addListener) mq.addListener(() => { placeAw(); fixMini(); });
+    fixMini(); placeAw();
+    setInterval(() => { placeAw(); fixMini(); }, 1000);   // nút 🏆 do file khác tạo muộn; giờ cũng cập nhật lại nếu game ghi đè
 })();
 
 cwBoot();
